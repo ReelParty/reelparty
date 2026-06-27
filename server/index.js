@@ -1,11 +1,62 @@
 import express from "express";
 import db from "./db.js";
 import { fetchMeta } from "./meta.js";
+import {
+  inviteMeta,
+  renderInviteHtml,
+  renderOgSvg,
+  renderDefaultOgSvg,
+  requestBaseUrl,
+} from "./invitePage.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
 
+app.set("trust proxy", true);
 app.use(express.json());
+
+async function partyInviteContext(code) {
+  const party = await db.collection("parties").findOne({ code });
+  if (!party) return null;
+  const memberCount = await db.collection("members").countDocuments({ party_code: code });
+  return {
+    hostName: party.host_name || "Someone",
+    code,
+    memberCount,
+  };
+}
+
+app.get("/join/:code", async (req, res) => {
+  const code = req.params.code?.trim();
+  if (!/^\d{5}$/.test(code)) {
+    return res.status(404).type("html").send("Not found");
+  }
+  const ctx = await partyInviteContext(code);
+  const baseUrl = requestBaseUrl(req);
+  const meta = inviteMeta({
+    ...(ctx || { hostName: "Someone", memberCount: 0 }),
+    code,
+    baseUrl,
+  });
+  if (!ctx) {
+    meta.title = "Join a ReelParty 🎬";
+    meta.description = `Party code ${code} · Watch TikToks, Reels & Shorts together`;
+  }
+  res.type("html").send(renderInviteHtml(meta));
+});
+
+app.get("/api/og/:code.svg", async (req, res) => {
+  const code = req.params.code?.trim();
+  if (!/^\d{5}$/.test(code)) {
+    res.type("image/svg+xml").send(renderDefaultOgSvg());
+    return;
+  }
+  const ctx = await partyInviteContext(code);
+  res
+    .type("image/svg+xml")
+    .set("Cache-Control", "public, max-age=300")
+    .send(ctx ? renderOgSvg(ctx) : renderDefaultOgSvg());
+});
 
 app.get("/api/meta", async (req, res) => {
   const url = req.query.url;
@@ -51,20 +102,21 @@ app.post("/api/parties", async (req, res) => {
     now_playing_id: null,
     created_at: now,
   });
-  await db.collection("members").insertOne({
-    id: hostId,
-    party_code: code,
-    name: hostName,
-    color,
-    joined_at: now,
-  });
+  await db.collection("members").updateOne(
+    { id: hostId, party_code: code },
+    {
+      $set: { id: hostId, party_code: code, name: hostName, color },
+      $setOnInsert: { joined_at: now },
+    },
+    { upsert: true },
+  );
   res.status(201).json({ ok: true });
 });
 
 app.post("/api/parties/:code/members", async (req, res) => {
   const { id, name, color } = req.body;
   await db.collection("members").updateOne(
-    { id },
+    { id, party_code: req.params.code },
     {
       $set: { id, party_code: req.params.code, name, color },
       $setOnInsert: { joined_at: new Date().toISOString() },

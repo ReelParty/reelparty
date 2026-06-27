@@ -113,7 +113,7 @@ function detectPlatform(raw) {
 const PENDING_SHARE_KEY = "rp_pending_share";
 
 function partyJoinUrl(code) {
-  return `${window.location.origin}/?join=${encodeURIComponent(code)}`;
+  return `${window.location.origin}/join/${encodeURIComponent(code)}`;
 }
 
 function parseJoinCodeFromUrl() {
@@ -976,9 +976,16 @@ export default function App() {
   const shareInviteMessage = async () => {
     if (!party?.code) return;
     const link = partyJoinUrl(party.code);
-    const message = `${link}\nJoin my ReelParty with code ${party.code}`;
+    const hostName =
+      party.members?.find((m) => m.id === party.hostId)?.name ||
+      party.hostName ||
+      "Someone";
     try {
-      await navigator.share({ text: message });
+      await navigator.share({
+        title: `Join ${hostName}'s ReelParty 🎬`,
+        text: `Party code ${party.code} — watch TikToks, Reels & Shorts together`,
+        url: link,
+      });
       setInviteOpen(false);
     } catch (err) {
       if (err?.name === "AbortError") return;

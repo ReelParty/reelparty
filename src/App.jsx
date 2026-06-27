@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Copy,
   ClipboardPaste,
+  ArrowUpDown,
 } from "lucide-react";
 import * as api from "./api";
 import { Avatar, avatarColorFor } from "./avatars";
@@ -175,6 +176,46 @@ function reactionSummary(reactions) {
     counts[emoji] = (counts[emoji] || 0) + 1;
   });
   return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
+function reactionCount(reactions) {
+  return Object.keys(reactions || {}).length;
+}
+
+const QUEUE_SORTS = [
+  { id: "added", label: "Queue" },
+  { id: "platform", label: "Platform" },
+  { id: "user", label: "User" },
+  { id: "reaction", label: "Reaction" },
+  { id: "views", label: "Most Views" },
+];
+
+function sortQueue(items, sortBy) {
+  if (!items?.length || sortBy === "added") return items;
+  const indexed = items.map((v, i) => ({ v, i }));
+  indexed.sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case "platform":
+        cmp = (platLabel[a.v.platform] || a.v.platform).localeCompare(
+          platLabel[b.v.platform] || b.v.platform,
+        );
+        break;
+      case "user":
+        cmp = (a.v.addedByName || "").localeCompare(b.v.addedByName || "", undefined, {
+          sensitivity: "base",
+        });
+        break;
+      case "reaction":
+        cmp = reactionCount(b.v.reactions) - reactionCount(a.v.reactions);
+        break;
+      case "views":
+        cmp = (b.v.watchCount || 0) - (a.v.watchCount || 0);
+        break;
+    }
+    return cmp || a.i - b.i;
+  });
+  return indexed.map(({ v }) => v);
 }
 
 function sortMembersForDisplay(members, userId, hostId) {
@@ -591,6 +632,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [ready, setReady] = useState(false);
   const [activeReactionBursts, setActiveReactionBursts] = useState({});
+  const [queueSort, setQueueSort] = useState("added");
   const burstIdRef = useRef(0);
   const prevReactionsRef = useRef({});
   const reactionsInitRef = useRef(false);
@@ -1171,6 +1213,7 @@ export default function App() {
   const sortedMembers = party
     ? sortMembersForDisplay(party.members, me, party.hostId)
     : [];
+  const displayedQueue = party ? sortQueue(party.queue, queueSort) : [];
 
   if (!ready) {
     return (
@@ -1629,23 +1672,39 @@ export default function App() {
             className="rp-scroll"
             style={{ flex: 1, marginTop: 16, marginRight: -6, paddingRight: 6 }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 10,
-              }}
-            >
-              <h3 className="rp-head" style={{ fontSize: 18 }}>
-                The Queue
-              </h3>
-              <span
-                className="rp-subtle"
-                style={{ fontWeight: 800, fontSize: 13 }}
-              >
-                {party.queue.length} video{party.queue.length !== 1 ? "s" : ""}
-              </span>
+            <div className="rp-queue-header">
+              <div className="rp-queue-header-top">
+                <h3 className="rp-head" style={{ fontSize: 18 }}>
+                  The Queue
+                </h3>
+                <span
+                  className="rp-subtle"
+                  style={{ fontWeight: 800, fontSize: 13 }}
+                >
+                  {party.queue.length} video{party.queue.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              {party.queue.length > 1 && (
+                <div className="rp-queue-sort" role="group" aria-label="Sort queue">
+                  <span className="rp-queue-sort-label">
+                    <ArrowUpDown size={14} aria-hidden />
+                    Sort
+                  </span>
+                  <div className="rp-queue-sort-pills">
+                    {QUEUE_SORTS.map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={`rp-queue-sort-pill${queueSort === id ? " rp-queue-sort-pill--on" : ""}`}
+                        onClick={() => setQueueSort(id)}
+                        aria-pressed={queueSort === id}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {party.queue.length === 0 ? (
               <div
@@ -1660,7 +1719,7 @@ export default function App() {
               </div>
             ) : (
               <div className="rp-grid" style={{ paddingBottom: 90 }}>
-                {party.queue.map((v, i) => {
+                {displayedQueue.map((v, i) => {
                   const adder = resolveMember(party, v.addedById, v);
                   const isMySpot = v.id === myWatchingId;
                   const iWatched = v.watchedBy?.includes(me);

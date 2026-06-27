@@ -159,7 +159,7 @@ app.post("/api/queue", async (req, res) => {
     thumbnail: v.thumbnail,
     added_by_id: v.addedById,
     added_by_name: v.addedByName,
-    watched_by: [],
+    watched_by: v.addedById ? [v.addedById] : [],
     reactions: {},
     position: v.position,
     created_at: new Date().toISOString(),
@@ -223,11 +223,27 @@ app.post("/api/queue/:videoId/unwatch", async (req, res) => {
   res.json({ ok: true });
 });
 
-const VALID_REACTIONS = ["🔥", "😂", "😍", "😮", "👏", "💀"];
+const PRESET_REACTIONS = ["🔥", "😂", "❤️", "😮", "🥹", "💀"];
+
+function isValidReaction(reaction) {
+  if (typeof reaction !== "string" || !reaction) return false;
+  if (PRESET_REACTIONS.includes(reaction)) return true;
+  try {
+    const segments = [
+      ...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(
+        reaction,
+      ),
+    ];
+    if (segments.length !== 1) return false;
+    return /\p{Extended_Pictographic}/u.test(segments[0].segment);
+  } catch {
+    return reaction.length <= 8 && /\p{Extended_Pictographic}/u.test(reaction);
+  }
+}
 
 app.post("/api/queue/:videoId/react", async (req, res) => {
   const { userId, partyCode, reaction } = req.body;
-  if (!VALID_REACTIONS.includes(reaction)) {
+  if (!isValidReaction(reaction)) {
     return res.status(400).json({ error: "Invalid reaction" });
   }
   const item = await db.collection("queue_items").findOne({
@@ -235,9 +251,6 @@ app.post("/api/queue/:videoId/react", async (req, res) => {
     party_code: partyCode,
   });
   if (!item) return res.status(404).json({ error: "Video not found" });
-  if (!item.watched_by?.includes(userId)) {
-    return res.status(403).json({ error: "Watch the video first" });
-  }
 
   const field = `reactions.${userId}`;
   if (item.reactions?.[userId] === reaction) {

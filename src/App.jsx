@@ -14,11 +14,13 @@ import {
   ArrowLeft,
   Loader2,
   Eye,
+  EyeOff,
   Trash2,
   ChevronDown,
   Copy,
   ClipboardPaste,
   ArrowUpDown,
+  Filter,
 } from "lucide-react";
 import * as api from "./api";
 import { Avatar, avatarColorFor } from "./avatars";
@@ -168,7 +170,63 @@ const defaultTitle = (p) =>
     : p === "instagram"
       ? "Instagram Reel"
       : "YouTube Short";
-const REACTIONS = ["🔥", "😂", "😍", "😮", "👏", "💀"];
+const REACTIONS = ["🔥", "😂", "❤️", "😮", "🥹", "💀"];
+const CUSTOM_EMOJIS = [
+  "😀",
+  "🤣",
+  "😭",
+  "🥰",
+  "😘",
+  "😱",
+  "🤯",
+  "😤",
+  "😎",
+  "🥳",
+  "👀",
+  "💔",
+  "👏",
+  "🙏",
+  "💯",
+  "✨",
+  "🎉",
+  "👑",
+  "💩",
+  "🤡",
+  "😈",
+  "🫡",
+  "🤷",
+  "💪",
+  "🍿",
+  "🫶",
+  "👎",
+  "💙",
+  "☠️",
+  "🦄",
+  "🤔",
+  "😬",
+  "🫠",
+  "🤪",
+  "😡",
+  "🥺",
+  "💅",
+  "🙄",
+  "😴",
+  "🤝",
+  "👊",
+  "🫨",
+  "🤌",
+  "🎯",
+  "⚡",
+  "🌶️",
+  "😳",
+  "🙌",
+  "🗿",
+  "🥶",
+];
+
+function isPresetReaction(reaction) {
+  return REACTIONS.includes(reaction);
+}
 
 function reactionSummary(reactions) {
   const counts = {};
@@ -185,7 +243,6 @@ function reactionCount(reactions) {
 const QUEUE_SORTS = [
   { id: "added", label: "Queue" },
   { id: "platform", label: "Platform" },
-  { id: "user", label: "User" },
   { id: "reaction", label: "Reaction" },
   { id: "views", label: "Most Views" },
 ];
@@ -201,11 +258,6 @@ function sortQueue(items, sortBy) {
           platLabel[b.v.platform] || b.v.platform,
         );
         break;
-      case "user":
-        cmp = (a.v.addedByName || "").localeCompare(b.v.addedByName || "", undefined, {
-          sensitivity: "base",
-        });
-        break;
       case "reaction":
         cmp = reactionCount(b.v.reactions) - reactionCount(a.v.reactions);
         break;
@@ -216,6 +268,20 @@ function sortQueue(items, sortBy) {
     return cmp || a.i - b.i;
   });
   return indexed.map(({ v }) => v);
+}
+
+function queueAdders(party) {
+  if (!party?.queue?.length) return [];
+  const seen = new Set();
+  const adders = [];
+  for (const v of party.queue) {
+    if (seen.has(v.addedById)) continue;
+    seen.add(v.addedById);
+    adders.push(resolveMember(party, v.addedById, v));
+  }
+  return adders.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+  );
 }
 
 function sortMembersForDisplay(members, userId, hostId) {
@@ -306,7 +372,10 @@ function ReactionChips({ reactions, onClick }) {
   );
 }
 function ReactionFan({ x, y, value, onPick, onClose }) {
+  const [customOpen, setCustomOpen] = useState(false);
   const radius = 76;
+  const customValue = value && !isPresetReaction(value) ? value : null;
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
@@ -318,42 +387,73 @@ function ReactionFan({ x, y, value, onPick, onClose }) {
   return (
     <div className="rp-reaction-fan-backdrop" onClick={onClose}>
       <div
-        className="rp-reaction-fan"
+        className={`rp-reaction-fan${customOpen ? " rp-reaction-fan--custom-open" : ""}`}
         style={{ left: x, top: y }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Pick a reaction"
       >
         <div className="rp-reaction-fan-ring" aria-hidden />
-        <button
-          type="button"
-          className="rp-reaction-fan-center"
-          onClick={onClose}
-          aria-label="Close reactions"
-        >
-          {value ? (
-            <span className="rp-reaction-fan-center-emoji">{value}</span>
-          ) : (
-            <Smile size={20} />
-          )}
-        </button>
-        {REACTIONS.map((emoji, i) => {
-          const angle = (2 * Math.PI * i) / REACTIONS.length - Math.PI / 2;
-          const tx = Math.cos(angle) * radius;
-          const ty = Math.sin(angle) * radius;
-          return (
+        {customOpen && (
+          <>
+            <div className="rp-reaction-fan-custom-picker" role="listbox">
+              {CUSTOM_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  role="option"
+                  className={`rp-reaction-fan-custom-emoji${customValue === emoji ? " rp-reaction-fan-custom-emoji--on" : ""}`}
+                  aria-label={`React ${emoji}`}
+                  aria-selected={customValue === emoji}
+                  onClick={() => onPick(emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
             <button
-              key={emoji}
               type="button"
-              className={`rp-reaction-fan-item${value === emoji ? " rp-reaction-fan-item--on" : ""}`}
-              style={{ "--tx": `${tx}px`, "--ty": `${ty}px`, "--i": i }}
-              onClick={() => onPick(emoji)}
-              aria-label={`React ${emoji}`}
+              className="rp-reaction-fan-picker-close"
+              onClick={() => setCustomOpen(false)}
+              aria-label="Close emoji picker"
             >
-              {emoji}
+              <X size={18} strokeWidth={2.5} aria-hidden />
             </button>
-          );
-        })}
+          </>
+        )}
+        {!customOpen && (
+          <button
+            type="button"
+            className={`rp-reaction-fan-center rp-reaction-fan-center--custom${customValue ? " rp-reaction-fan-center--on" : ""}`}
+            onClick={() => setCustomOpen(true)}
+            aria-label="Pick custom emoji"
+            aria-expanded={false}
+          >
+            {customValue ? (
+              <span className="rp-reaction-fan-center-emoji">{customValue}</span>
+            ) : (
+              <Plus size={22} strokeWidth={2.5} aria-hidden />
+            )}
+          </button>
+        )}
+        {!customOpen &&
+          REACTIONS.map((emoji, i) => {
+            const angle = (2 * Math.PI * i) / REACTIONS.length - Math.PI / 2;
+            const tx = Math.cos(angle) * radius;
+            const ty = Math.sin(angle) * radius;
+            return (
+              <button
+                key={emoji}
+                type="button"
+                className={`rp-reaction-fan-item${value === emoji ? " rp-reaction-fan-item--on" : ""}`}
+                style={{ "--tx": `${tx}px`, "--ty": `${ty}px`, "--i": i }}
+                onClick={() => onPick(emoji)}
+                aria-label={`React ${emoji}`}
+              >
+                {emoji}
+              </button>
+            );
+          })}
       </div>
     </div>
   );
@@ -633,6 +733,14 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [activeReactionBursts, setActiveReactionBursts] = useState({});
   const [queueSort, setQueueSort] = useState("added");
+  const [hideWatched, setHideWatched] = useState(() => {
+    try {
+      return localStorage.getItem("rp_hide_watched") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [filterUserId, setFilterUserId] = useState(null);
   const burstIdRef = useRef(0);
   const prevReactionsRef = useRef({});
   const reactionsInitRef = useRef(false);
@@ -806,6 +914,12 @@ export default function App() {
       setMyWatchingId(null);
     }
   }, [screen, code, ready, myWatchingId]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("rp_hide_watched", hideWatched ? "1" : "0");
+    } catch {}
+  }, [hideWatched]);
 
   useEffect(() => {
     if (!party?.queue || !myWatchingId) return;
@@ -1166,10 +1280,6 @@ export default function App() {
       );
   };
   const setReaction = async (vid, reaction) => {
-    if (!vid.watchedBy?.includes(me)) {
-      showToast("Watch the video first to react");
-      return;
-    }
     const prev = vid.reactions?.[me] || null;
     const removing = prev === reaction;
     const next = { ...(vid.reactions || {}) };
@@ -1220,7 +1330,21 @@ export default function App() {
   const sortedMembers = party
     ? sortMembersForDisplay(party.members, me, party.hostId)
     : [];
-  const displayedQueue = party ? sortQueue(party.queue, queueSort) : [];
+  const adders = party ? queueAdders(party) : [];
+  const filteredQueue = party
+    ? party.queue.filter((v) => {
+        if (hideWatched && v.watchedBy?.includes(me) && v.id !== myWatchingId) {
+          return false;
+        }
+        if (filterUserId && v.addedById !== filterUserId) return false;
+        return true;
+      })
+    : [];
+  const displayedQueue = sortQueue(filteredQueue, queueSort);
+  const filterUser = filterUserId
+    ? adders.find((m) => m.id === filterUserId)
+    : null;
+  const hasActiveFilters = hideWatched || filterUserId;
 
   if (!ready) {
     return (
@@ -1688,9 +1812,53 @@ export default function App() {
                   className="rp-subtle"
                   style={{ fontWeight: 800, fontSize: 13 }}
                 >
-                  {party.queue.length} video{party.queue.length !== 1 ? "s" : ""}
+                  {hasActiveFilters && displayedQueue.length < party.queue.length
+                    ? `${displayedQueue.length} of ${party.queue.length} videos`
+                    : `${party.queue.length} video${party.queue.length !== 1 ? "s" : ""}`}
                 </span>
               </div>
+              {party.queue.length > 0 && (
+                <div
+                  className="rp-queue-filters"
+                  role="group"
+                  aria-label="Filter queue"
+                >
+                  <span className="rp-queue-sort-label">
+                    <Filter size={14} aria-hidden />
+                    Filter
+                  </span>
+                  <div className="rp-queue-filter-pills">
+                    <button
+                      type="button"
+                      className={`rp-queue-filter-pill${hideWatched ? " rp-queue-filter-pill--on" : ""}`}
+                      onClick={() => setHideWatched((on) => !on)}
+                      aria-pressed={hideWatched}
+                    >
+                      {hideWatched ? (
+                        <EyeOff size={14} aria-hidden />
+                      ) : (
+                        <Eye size={14} aria-hidden />
+                      )}
+                      Hide watched
+                    </button>
+                    {adders.length > 1 &&
+                      adders.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className={`rp-queue-filter-pill rp-queue-filter-pill--user${filterUserId === m.id ? " rp-queue-filter-pill--on" : ""}`}
+                          onClick={() =>
+                            setFilterUserId((id) => (id === m.id ? null : m.id))
+                          }
+                          aria-pressed={filterUserId === m.id}
+                        >
+                          <Avatar id={m.id} name={m.name} sm />
+                          {m.id === me ? "You" : m.name}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
               {party.queue.length > 1 && (
                 <div className="rp-queue-sort" role="group" aria-label="Sort queue">
                   <span className="rp-queue-sort-label">
@@ -1722,6 +1890,25 @@ export default function App() {
                 <p style={{ fontWeight: 800, marginTop: 6 }}>Queue's empty!</p>
                 <p style={{ fontWeight: 700, fontSize: 13 }}>
                   Copy a link, then tap <b style={{ color: "#58CC02" }}>＋</b>
+                </p>
+              </div>
+            ) : displayedQueue.length === 0 ? (
+              <div
+                style={{ textAlign: "center", padding: "40px 10px" }}
+                className="rp-subtle"
+              >
+                <div style={{ fontSize: 46 }}>
+                  {filterUserId ? "🔍" : "✅"}
+                </div>
+                <p style={{ fontWeight: 800, marginTop: 6 }}>
+                  {filterUserId
+                    ? `No videos from ${filterUser?.name || "this person"}`
+                    : "All caught up!"}
+                </p>
+                <p style={{ fontWeight: 700, fontSize: 13 }}>
+                  {filterUserId
+                    ? "Try another filter or turn off your active filters."
+                    : "Turn off Hide watched to see everything again."}
                 </p>
               </div>
             ) : (
@@ -1756,6 +1943,12 @@ export default function App() {
                           {isMySpot && (
                             <div
                               className="rp-your-spot-shade"
+                              aria-hidden="true"
+                            />
+                          )}
+                          {iWatched && (
+                            <div
+                              className="rp-watched-shade"
                               aria-hidden="true"
                             />
                           )}
@@ -1803,31 +1996,29 @@ export default function App() {
                             <span>{v.watchCount || 0}</span>
                           </button>
                         )}
-                        {iWatched && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect =
-                                e.currentTarget.getBoundingClientRect();
-                              setReactionFan({
-                                video: v,
-                                x: rect.left + rect.width / 2,
-                                y: rect.top + rect.height / 2,
-                              });
-                            }}
-                            className="rp-thumb-badge rp-react-badge"
-                            aria-label="React to video"
-                          >
-                            {v.reactions?.[me] ? (
-                              <span className="rp-react-badge-emoji">
-                                {v.reactions[me]}
-                              </span>
-                            ) : (
-                              <Smile size={16} />
-                            )}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            setReactionFan({
+                              video: v,
+                              x: rect.left + rect.width / 2,
+                              y: rect.top + rect.height / 2,
+                            });
+                          }}
+                          className="rp-thumb-badge rp-react-badge"
+                          aria-label="React to video"
+                        >
+                          {v.reactions?.[me] ? (
+                            <span className="rp-react-badge-emoji">
+                              {v.reactions[me]}
+                            </span>
+                          ) : (
+                            <Smile size={16} />
+                          )}
+                        </button>
                         {(v.addedById === me || isHost) && (
                           <button
                             type="button"

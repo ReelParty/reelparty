@@ -17,6 +17,7 @@ import {
   Trash2,
   ChevronDown,
   Copy,
+  ClipboardPaste,
 } from "lucide-react";
 import * as api from "./api";
 import { Avatar, avatarColorFor } from "./avatars";
@@ -85,6 +86,12 @@ function extractLinkFromText(text) {
   if (!text) return "";
   const match = text.match(/https?:\/\/[^\s<>"']+/);
   return match ? match[0].replace(/[.,)]+$/, "") : text.trim();
+}
+
+function normalizeClipboardText(raw) {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "";
+  return extractLinkFromText(trimmed) || trimmed;
 }
 
 function detectPlatform(raw) {
@@ -388,6 +395,7 @@ function Btn({
   tone = "green",
   onClick,
   onPointerDown,
+  onTouchStart,
   full,
   disabled,
   sm,
@@ -399,6 +407,7 @@ function Btn({
       className="rp-btn"
       onClick={onClick}
       onPointerDown={onPointerDown}
+      onTouchStart={onTouchStart}
       disabled={disabled}
       style={{
         "--c": p.c,
@@ -571,6 +580,7 @@ export default function App() {
   const [addMsg, setAddMsg] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteVal, setPasteVal] = useState("");
+  const [pasteBusy, setPasteBusy] = useState(false);
   const [viewersVideo, setViewersVideo] = useState(null);
   const [reactionFan, setReactionFan] = useState(null);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -628,8 +638,8 @@ export default function App() {
     else delete prevReactionsRef.current[videoId][userId];
   }, []);
 
-  const primeClipboardRead = useCallback(() => {
-    clipboardReadRef.current = null;
+  const startClipboardRead = useCallback(() => {
+    if (clipboardReadRef.current) return;
     try {
       if (navigator.clipboard?.readText) {
         clipboardReadRef.current = navigator.clipboard.readText();
@@ -637,23 +647,38 @@ export default function App() {
     } catch {}
   }, []);
 
-  const resolveClipboardText = useCallback(async (hiddenEl) => {
+  const readClipboardNow = useCallback(async (hiddenEl) => {
     if (!clipboardReadRef.current) {
-      try {
-        if (navigator.clipboard?.readText) {
-          clipboardReadRef.current = navigator.clipboard.readText();
-        }
-      } catch {}
+      startClipboardRead();
     }
     let fromApi = "";
     try {
       if (clipboardReadRef.current) fromApi = await clipboardReadRef.current;
     } catch {}
     clipboardReadRef.current = null;
-    const trimmed = (fromApi || "").trim();
+    const trimmed = normalizeClipboardText(fromApi);
     if (trimmed) return trimmed;
-    if (!isIOS()) return readClipboardViaExecCommand(hiddenEl);
+    if (!isIOS()) return normalizeClipboardText(readClipboardViaExecCommand(hiddenEl));
     return "";
+  }, [startClipboardRead]);
+
+  const applyClipboardToPaste = useCallback(async (hiddenEl) => {
+    const text = await readClipboardNow(hiddenEl);
+    if (!text) return "";
+    setPasteVal(text);
+    return text;
+  }, [readClipboardNow]);
+
+  const focusPasteInput = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const input = pasteInputRef.current;
+        if (!input) return;
+        input.focus({ preventScroll: true });
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -844,12 +869,14 @@ export default function App() {
     window.visualViewport?.addEventListener("scroll", lift);
     lift();
 
+    if (!pasteBusy) focusPasteInput();
+
     return () => {
       window.visualViewport?.removeEventListener("resize", lift);
       window.visualViewport?.removeEventListener("scroll", lift);
       if (panel) panel.style.transform = "";
     };
-  }, [pasteOpen]);
+  }, [pasteOpen, pasteBusy, focusPasteInput]);
 
   const createParty = async () => {
     const nm = nameInput.trim() || "Host";
@@ -917,7 +944,8 @@ export default function App() {
     }
   };
   const ingestLink = async (raw) => {
-    const det = detectPlatform(raw);
+    const text = normalizeClipboardText(raw);
+    const det = detectPlatform(text);
     if (!det) {
       showToast("That's not a TikTok, Reels, or Shorts link 🙈");
       return;
@@ -960,14 +988,42 @@ export default function App() {
     void ingestLink(pending);
   }, [screen, party, adding]);
 
-  const tapAdd = async () => {
-    const text = await resolveClipboardText(hiddenPasteRef.current);
-    if (text && detectPlatform(text)) {
-      void ingestLink(text);
-      return;
-    }
-    setPasteVal(text);
-    setPasteOpen(true);
+  const tapAdd = () => {
+    setPasteVal("");
+    setPasteBusy(true);
+    clipboardReadRef.current = null;
+    startClipboardRead();
+
+    void (async () => {
+      const readPromise = readClipboardNow(hiddenPasteRef.current);
+      const timeout = new Promise((resolve) => setTimeout(() => resolve(""), 12000));
+      const text = await Promise.race([readPromise, timeout]);
+      setPasteBusy(false);
+      if (text && detectPlatform(text)) {
+        void ingestLink(text);
+        return;
+      }
+      setPasteOpen(true);
+      if (text) setPasteVal(text);
+      focusPasteInput();
+    })();
+  };
+
+  const pasteFromClipboard = () => {
+    clipboardReadRef.current = null;
+    startClipboardRead();
+    void (async () => {
+      setPasteBusy(true);
+      const text = await readClipboardNow(hiddenPasteRef.current);
+      setPasteBusy(false);
+      if (text) {
+        setPasteVal(text);
+        if (detectPlatform(text)) return;
+      } else {
+        showToast(isIOS() ? "Tap Allow Paste when prompted" : "Nothing to paste");
+      }
+      focusPasteInput();
+    })();
   };
   const playVideo = async (vid) => {
     setMyWatchingId(vid.id);
@@ -1780,7 +1836,6 @@ export default function App() {
           <div className="rp-fab">
             <Btn
               tone="green"
-              onPointerDown={primeClipboardRead}
               onClick={tapAdd}
               style={{
                 borderRadius: 999,
@@ -1973,6 +2028,17 @@ export default function App() {
         </Sheet>
       )}
 
+      {pasteBusy && !pasteOpen && (
+        <div className="rp-paste-reading-hint" role="status" aria-live="polite">
+          <Loader2 size={16} className="rp-spin" />
+          <span>
+            {isIOS()
+              ? "Tap Paste when Safari prompts at the top of the screen"
+              : "Reading clipboard…"}
+          </span>
+        </div>
+      )}
+
       {pasteOpen && (
         <Sheet
           panelRef={pastePanelRef}
@@ -1997,6 +2063,18 @@ export default function App() {
             TikTok, Instagram Reels, or YouTube Shorts
           </p>
           <div className="rp-paste-form">
+            {pasteBusy && (
+              <div className="rp-paste-busy">
+                <Loader2 size={18} className="rp-spin" />
+                <span>Reading clipboard…</span>
+              </div>
+            )}
+            {!pasteBusy && !pasteVal && (
+              <Btn tone="blue" full sm onClick={pasteFromClipboard}>
+                <ClipboardPaste size={18} />{" "}
+                {isIOS() ? "PASTE FROM CLIPBOARD" : "PASTE LINK"}
+              </Btn>
+            )}
             <input
               ref={pasteInputRef}
               className="rp-input"
@@ -2006,8 +2084,14 @@ export default function App() {
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
+              onFocus={() => {
+                if (!pasteVal) {
+                  clipboardReadRef.current = null;
+                  void applyClipboardToPaste(hiddenPasteRef.current);
+                }
+              }}
               onPaste={(e) => {
-                const txt = e.clipboardData?.getData("text")?.trim();
+                const txt = normalizeClipboardText(e.clipboardData?.getData("text"));
                 if (!txt) return;
                 e.preventDefault();
                 setPasteVal(txt);

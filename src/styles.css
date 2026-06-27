@@ -866,6 +866,37 @@ body {
   gap: 12px;
   margin-top: 4px;
 }
+.rp-paste-busy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--rp-accent-blue);
+}
+.rp-paste-reading-hint {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--rp-surface-2);
+  border: 1px solid var(--rp-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--rp-text);
+  text-align: center;
+}
 .rp-hidden-paste {
   position: fixed;
   left: -9999px;

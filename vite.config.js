@@ -12,7 +12,8 @@ export default defineConfig({
       "/api": "http://localhost:3001",
       "/join": "http://localhost:3001",
     },
-    // ngrok terminates TLS on 443; without this, HMR tries wss://…:5173 → ERR_SSL_PROTOCOL_ERROR
-    hmr: process.env.TUNNEL ? { clientPort: 443 } : undefined,
+    // ngrok breaks Vite's HMR websocket; after ~30s Vite full-reloads the page.
+    // Tunnel mode is for mobile testing, not live file editing — disable HMR there.
+    hmr: process.env.TUNNEL ? false : undefined,
   },
 });

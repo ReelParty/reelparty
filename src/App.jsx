@@ -69,6 +69,41 @@ function saveSession(code, watchingVideoId) {
   localStorage.setItem("rp_session", JSON.stringify(payload));
 }
 
+const QUEUE_FILTERS_KEY = "rp_queue_filters";
+
+function loadQueueFilters(code) {
+  if (!code) return { hideWatched: false, filterUserId: null };
+  try {
+    const all = JSON.parse(localStorage.getItem(QUEUE_FILTERS_KEY) || "{}");
+    const saved = all[code];
+    if (saved) {
+      return {
+        hideWatched: !!saved.hideWatched,
+        filterUserId: saved.filterUserId || null,
+      };
+    }
+    return {
+      hideWatched: localStorage.getItem("rp_hide_watched") === "1",
+      filterUserId: null,
+    };
+  } catch {
+    return { hideWatched: false, filterUserId: null };
+  }
+}
+
+function saveQueueFilters(code, filters) {
+  if (!code) return;
+  try {
+    const all = JSON.parse(localStorage.getItem(QUEUE_FILTERS_KEY) || "{}");
+    all[code] = {
+      hideWatched: !!filters.hideWatched,
+      filterUserId: filters.filterUserId || null,
+    };
+    localStorage.setItem(QUEUE_FILTERS_KEY, JSON.stringify(all));
+    localStorage.setItem("rp_hide_watched", filters.hideWatched ? "1" : "0");
+  } catch {}
+}
+
 function readClipboardViaExecCommand(inputEl) {
   if (!inputEl) return "";
   inputEl.value = "";
@@ -270,7 +305,7 @@ function sortQueue(items, sortBy) {
   return indexed.map(({ v }) => v);
 }
 
-function queueAdders(party) {
+function queueAdders(party, userId) {
   if (!party?.queue?.length) return [];
   const seen = new Set();
   const adders = [];
@@ -279,9 +314,11 @@ function queueAdders(party) {
     seen.add(v.addedById);
     adders.push(resolveMember(party, v.addedById, v));
   }
-  return adders.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-  );
+  return adders.sort((a, b) => {
+    if (a.id === userId) return -1;
+    if (b.id === userId) return 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
 }
 
 function sortMembersForDisplay(members, userId, hostId) {
@@ -733,14 +770,9 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [activeReactionBursts, setActiveReactionBursts] = useState({});
   const [queueSort, setQueueSort] = useState("added");
-  const [hideWatched, setHideWatched] = useState(() => {
-    try {
-      return localStorage.getItem("rp_hide_watched") === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [hideWatched, setHideWatched] = useState(false);
   const [filterUserId, setFilterUserId] = useState(null);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
   const burstIdRef = useRef(0);
   const prevReactionsRef = useRef({});
   const reactionsInitRef = useRef(false);
@@ -947,10 +979,27 @@ export default function App() {
   }, [screen, code, ready, myWatchingId]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("rp_hide_watched", hideWatched ? "1" : "0");
-    } catch {}
-  }, [hideWatched]);
+    if (!code || screen !== "party") {
+      setFiltersHydrated(false);
+      return;
+    }
+    const saved = loadQueueFilters(code);
+    setHideWatched(saved.hideWatched);
+    setFilterUserId(saved.filterUserId);
+    setFiltersHydrated(true);
+  }, [code, screen]);
+
+  useEffect(() => {
+    if (!filtersHydrated || !code || screen !== "party") return;
+    saveQueueFilters(code, { hideWatched, filterUserId });
+  }, [filtersHydrated, code, screen, hideWatched, filterUserId]);
+
+  useEffect(() => {
+    if (!party?.queue || !filterUserId) return;
+    if (!party.queue.some((v) => v.addedById === filterUserId)) {
+      setFilterUserId(null);
+    }
+  }, [party?.queue, filterUserId]);
 
   useEffect(() => {
     if (!party?.queue || !myWatchingId) return;
@@ -1356,7 +1405,7 @@ export default function App() {
   const sortedMembers = party
     ? sortMembersForDisplay(party.members, me, party.hostId)
     : [];
-  const adders = party ? queueAdders(party) : [];
+  const adders = party ? queueAdders(party, me) : [];
   const filteredQueue = party
     ? party.queue.filter((v) => {
         if (hideWatched && v.watchedBy?.includes(me) && v.id !== myWatchingId) {

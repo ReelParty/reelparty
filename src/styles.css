@@ -66,7 +66,47 @@ body {
   align-items: center;
   min-height: 84vh;
   padding-top: 28px;
+  position: relative;
+  z-index: 1;
   animation: rise 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.rp-welcome-texture {
+  position: absolute;
+  top: -20px;
+  left: -18px;
+  right: -18px;
+  bottom: -26px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.rp-welcome-texture-item {
+  position: absolute;
+  top: -8%;
+  opacity: var(--op);
+  color: rgba(255, 255, 255, 0.42);
+  animation: welcomeTextureFall var(--dur) linear infinite;
+  animation-delay: calc(-1 * var(--offset) * var(--dur));
+  will-change: transform;
+  user-select: none;
+}
+.rp-welcome-texture-item--emoji {
+  line-height: 1;
+  filter: saturate(0.85);
+}
+@keyframes welcomeTextureFall {
+  from {
+    transform: translate3d(0, -12vh, 0) rotate(var(--rot)) scale(var(--scale, 1));
+  }
+  to {
+    transform: translate3d(var(--drift), 112vh, 0) rotate(calc(var(--rot) + 22deg))
+      scale(var(--scale, 1));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rp-welcome-texture {
+    display: none;
+  }
 }
 .rp-welcome-lockup {
   display: flex;

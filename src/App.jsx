@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Play,
   Plus,
@@ -258,6 +258,7 @@ const CUSTOM_EMOJIS = [
   "🗿",
   "🥶",
 ];
+const WELCOME_TEXTURE_EMOJIS = [...new Set([...REACTIONS, ...CUSTOM_EMOJIS])];
 
 function isPresetReaction(reaction) {
   return REACTIONS.includes(reaction);
@@ -627,6 +628,68 @@ function Confetti({ go }) {
             borderRadius: Math.random() > 0.5 ? "50%" : "2px",
           }}
         />
+      ))}
+    </div>
+  );
+}
+
+function WelcomeTexture() {
+  const particles = useMemo(() => {
+    const platforms = ["tiktok", "youtube", "instagram"];
+    const pick = (items) => items[Math.floor(Math.random() * items.length)];
+    const pickSize = (isLogo) => {
+      const roll = Math.random();
+      if (roll < 0.25) {
+        return isLogo ? 12 + Math.random() * 6 : 14 + Math.random() * 6;
+      }
+      if (roll < 0.75) {
+        return isLogo ? 18 + Math.random() * 10 : 20 + Math.random() * 12;
+      }
+      return isLogo ? 28 + Math.random() * 10 : 32 + Math.random() * 12;
+    };
+    return Array.from({ length: 72 }, (_, i) => {
+      const isLogo = Math.random() < 0.32;
+      const size = pickSize(isLogo);
+      const scale = 0.84 + Math.random() * 0.22;
+      return {
+        id: i,
+        kind: isLogo ? "logo" : "emoji",
+        value: isLogo ? pick(platforms) : pick(WELCOME_TEXTURE_EMOJIS),
+        left: Math.random() * 98 + 1,
+        offset: Math.random(),
+        duration: 24 + Math.random() * 26,
+        size,
+        scale,
+        drift: -40 + Math.random() * 80,
+        rotate: -22 + Math.random() * 44,
+        opacity: 0.07 + (size / 64) * 0.095 + Math.random() * 0.045,
+      };
+    });
+  }, []);
+
+  return (
+    <div className="rp-welcome-texture" aria-hidden>
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          className={`rp-welcome-texture-item rp-welcome-texture-item--${p.kind}`}
+          style={{
+            left: `${p.left}%`,
+            "--dur": `${p.duration}s`,
+            "--offset": p.offset,
+            "--drift": `${p.drift}px`,
+            "--rot": `${p.rotate}deg`,
+            "--op": p.opacity,
+            "--scale": p.scale,
+            fontSize: p.kind === "emoji" ? p.size : undefined,
+          }}
+        >
+          {p.kind === "logo" ? (
+            <PlatformLogo platform={p.value} size={p.size} />
+          ) : (
+            p.value
+          )}
+        </span>
       ))}
     </div>
   );
@@ -1441,6 +1504,7 @@ export default function App() {
     <div className="rp-root">
       <Confetti go={confetti} />
       {toast && <div className="rp-toast">{toast}</div>}
+      {screen === "home" && <WelcomeTexture />}
 
       {screen === "home" && (
         <div className="rp-welcome">

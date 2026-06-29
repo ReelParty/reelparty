@@ -638,7 +638,7 @@ function WelcomeLockup() {
       <div className="rp-welcome-mark-wrap">
         <div className="rp-welcome-mark-glow" aria-hidden />
         <div className="rp-welcome-mark">
-          <span className="rp-welcome-mark-emoji" aria-hidden>🎬</span>
+          <span className="rp-welcome-mark-emoji" aria-hidden>🥳</span>
         </div>
         <div className="rp-welcome-spark rp-welcome-spark--1" aria-hidden>✦</div>
         <div className="rp-welcome-spark rp-welcome-spark--2" aria-hidden>✦</div>

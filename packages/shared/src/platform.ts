@@ -15,13 +15,13 @@ export function normalizeClipboardText(raw: string | null | undefined): string {
 /** Detect a supported short-video platform + id from a raw URL/string. */
 export function detectPlatform(raw: string | null | undefined): DetectedLink | null {
   if (!raw) return null;
-  const url = raw.trim();
+  const url = extractLinkFromText(raw.trim()) || raw.trim();
   const yt = url.match(
     /(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/,
   );
   if (yt) return { platform: "youtube", videoId: yt[1] ?? null, url };
   const tt = url.match(/\/video\/(\d+)/);
-  if (/tiktok\.com/.test(url)) {
+  if (/tiktok\.com/.test(url) || /vm\.tiktok\.com/.test(url)) {
     return { platform: "tiktok", videoId: tt?.[1] ?? null, url };
   }
   const ig = url.match(/instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/);

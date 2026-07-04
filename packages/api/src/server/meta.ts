@@ -9,6 +9,7 @@ export interface VideoMeta {
   title: string;
   creator: string;
   thumbnail: string;
+  url?: string;
 }
 
 function decodeHtml(s: string): string {
@@ -121,6 +122,7 @@ export async function fetchMeta(rawUrl: string): Promise<VideoMeta> {
         title: oembed.title || defaultTitle(platform),
         creator: oembed.author_name || "",
         thumbnail: oembed.thumbnail_url,
+        url: resolved,
       };
     }
     const og = await scrapeOg(resolved);
@@ -129,9 +131,15 @@ export async function fetchMeta(rawUrl: string): Promise<VideoMeta> {
         title: og.title || defaultTitle(platform),
         creator: og.creator,
         thumbnail: og.thumbnail,
+        url: resolved,
       };
     }
-    return { title: defaultTitle(platform), creator: "", thumbnail: "" };
+    return {
+      title: defaultTitle(platform),
+      creator: "",
+      thumbnail: "",
+      url: resolved,
+    };
   }
 
   // instagram

@@ -128,7 +128,15 @@ export function QueueCard({
         </Text>
         <ReactionChips reactions={video.reactions} onPress={onViewers} />
         <View className="mt-1 flex-row items-center gap-1.5">
-          {adder.name ? <Avatar id={adder.id} name={adder.name} sm /> : null}
+          {adder.name ? (
+            <Avatar
+              id={adder.id}
+              name={adder.name}
+              color={adder.color}
+              faceIndex={adder.avatarFace}
+              sm
+            />
+          ) : null}
           <View className="min-w-0 flex-1">
             <Text className="text-text2" numberOfLines={1} style={{ fontSize: 11, fontWeight: "700" }}>
               {memberLabel(adder)}

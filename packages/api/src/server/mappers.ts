@@ -1,3 +1,4 @@
+import { avatarIndexFor } from "@reelparty/shared";
 import type { Member, Party, Platform, QueueItem } from "@reelparty/shared";
 
 /** Raw Mongo document shapes (snake_case as stored). */
@@ -12,6 +13,7 @@ export interface MemberRow {
   id: string;
   name: string;
   color: string;
+  avatar_face?: number;
   joined_at?: string;
 }
 
@@ -42,6 +44,7 @@ export const mapMember = (r: MemberRow): Member => ({
   id: r.id,
   name: r.name,
   color: r.color,
+  avatarFace: r.avatar_face ?? avatarIndexFor(r.id),
   joinedAt: r.joined_at || "",
 });
 

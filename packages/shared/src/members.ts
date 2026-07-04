@@ -1,4 +1,4 @@
-import { avatarColorFor } from "./avatars";
+import { avatarColorFor, avatarIndexFor } from "./avatars";
 import type { PartyView, QueueItem, ResolvedMember } from "./types";
 
 /** Resolve a member id to a display member, falling back to booted guests. */
@@ -13,7 +13,14 @@ export function resolveMember(
     (video?.addedById === memberId ? video.addedByName : null) ||
     party?.queue.find((q) => q.addedById === memberId)?.addedByName ||
     "Guest";
-  return { id: memberId, name, color: avatarColorFor(memberId), booted: true, joinedAt: "" };
+  return {
+    id: memberId,
+    name,
+    color: avatarColorFor(memberId),
+    avatarFace: avatarIndexFor(memberId),
+    booted: true,
+    joinedAt: "",
+  };
 }
 
 /** Distinct people who added videos, with the current user first. */

@@ -18,6 +18,15 @@ body {
   overscroll-behavior-y: none;
 }
 
+.rp-screen-shell {
+  background: radial-gradient(
+    120% 80% at 50% 0%,
+    #1a1a24 0%,
+    #12121a 55%,
+    #0a0a0f 100%
+  );
+}
+
 @keyframes sheetFadeIn {
   from {
     opacity: 0;
@@ -111,4 +120,47 @@ body {
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.rp-welcome-texture {
+  position: absolute;
+  top: -20px;
+  left: -18px;
+  right: -18px;
+  bottom: -20px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rp-welcome-texture-item {
+  position: absolute;
+  top: -8%;
+  opacity: var(--op);
+  color: rgba(255, 255, 255, 0.42);
+  animation: welcomeTextureFall var(--dur) linear infinite;
+  animation-delay: calc(-1 * var(--offset) * var(--dur));
+  will-change: transform;
+  user-select: none;
+}
+
+.rp-welcome-texture-item--emoji {
+  line-height: 1;
+  filter: saturate(0.85);
+}
+
+@keyframes welcomeTextureFall {
+  from {
+    transform: translate3d(0, -12vh, 0) rotate(var(--rot)) scale(var(--scale, 1));
+  }
+  to {
+    transform: translate3d(var(--drift), 112vh, 0) rotate(calc(var(--rot) + 22deg))
+      scale(var(--scale, 1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-welcome-texture {
+    display: none;
+  }
 }

@@ -8,6 +8,7 @@ import { useApp } from "../../provider";
 import { useUserId } from "../../hooks/useUserId";
 import { useAppNavigation } from "../../navigation/useAppNavigation";
 import { WelcomeLockup } from "../../components/WelcomeLockup";
+import { WelcomeTexture } from "../../components/WelcomeTexture";
 
 export function WelcomeScreen() {
   const me = useUserId();
@@ -50,12 +51,13 @@ export function WelcomeScreen() {
   }
 
   return (
-    <Screen>
-      <View className="mt-7 items-center">
+    <Screen className="relative overflow-hidden">
+      <WelcomeTexture />
+      <View className="relative z-10 mt-7 items-center">
         <WelcomeLockup />
       </View>
       <View className="flex-1" />
-      <View className="gap-3.5 pb-5">
+      <View className="relative z-10 gap-3.5 pb-5">
         <Button tone="green" full onPress={nav.goCreate}>
           <Icons.Sparkles size={20} color="#fff" />
           <ButtonText>CREATE A PARTY</ButtonText>

@@ -39,7 +39,7 @@ export function MembersPill({
               key={m.id}
               className="flex-row items-center gap-2 rounded-full border-2 border-border bg-surface py-[3px] pl-[3px] pr-2.5"
             >
-              <Avatar id={m.id} name={m.name} sm />
+              <Avatar id={m.id} name={m.name} color={m.color} faceIndex={m.avatarFace} sm />
               <Text style={{ fontSize: 13, fontWeight: "800" }}>{m.name}</Text>
               {m.id === hostId ? (
                 <Icons.Crown size={13} color="#FFC800" fill="#FFC800" />

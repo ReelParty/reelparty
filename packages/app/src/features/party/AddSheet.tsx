@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Button, ButtonText, Heading, Muted, Spinner } from "@reelparty/ui";
-import { detectPlatform } from "@reelparty/shared";
+import { detectPlatform, normalizeClipboardText } from "@reelparty/shared";
 import { useApp } from "../../provider";
 import { Sheet } from "../../components/Sheet";
 import { Input } from "../../components/Input";
@@ -29,11 +29,13 @@ export function AddSheet({
       return;
     }
     void bridge.readClipboard().then((text) => {
-      if (text && detectPlatform(text)) setValue(text);
+      const normalized = normalizeClipboardText(text);
+      if (normalized && detectPlatform(normalized)) setValue(normalized);
     });
   }, [open, bridge]);
 
-  const valid = !!detectPlatform(value);
+  const normalized = normalizeClipboardText(value);
+  const valid = !!detectPlatform(normalized);
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -50,15 +52,15 @@ export function AddSheet({
           onChangeText={setValue}
           autoCapitalize="none"
           autoCorrect={false}
-          keyboardType="url"
+          autoComplete="off"
           returnKeyType="done"
-          onSubmitEditing={() => valid && onSubmit(value)}
+          onSubmitEditing={() => valid && onSubmit(normalized)}
         />
         <Button
           tone="green"
           full
           disabled={adding || !valid}
-          onPress={() => onSubmit(value)}
+          onPress={() => onSubmit(normalized)}
         >
           {adding ? <Spinner size="small" color="#fff" /> : <ButtonText>ADD TO QUEUE</ButtonText>}
         </Button>

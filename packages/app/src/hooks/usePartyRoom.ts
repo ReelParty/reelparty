@@ -110,14 +110,17 @@ export function usePartyRoom(code: string) {
       setAdding(true);
       try {
         const meta = await utils.meta.fetch.fetch({ url: det.url });
+        const storedUrl = meta.url || det.url;
+        const videoId =
+          det.videoId || storedUrl.match(/\/video\/(\d+)/)?.[1] || null;
         const myName =
           party.members.find((m) => m.id === me)?.name || "Someone";
         await addMut.mutateAsync({
           id: rid(),
           partyCode: code,
-          url: det.url,
+          url: storedUrl,
           platform: det.platform,
-          videoId: det.videoId,
+          videoId,
           title: meta.title,
           creator: meta.creator,
           thumbnail: meta.thumbnail,

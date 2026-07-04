@@ -99,7 +99,7 @@ export function QueueControls({
                   onPress={() => setFilterUserId((id) => (id === m.id ? null : m.id))}
                   label={`Filter by ${m.id === me ? "you" : m.name}`}
                 >
-                  <Avatar id={m.id} name={m.name} sm />
+                  <Avatar id={m.id} name={m.name} color={m.color} faceIndex={m.avatarFace} sm />
                   <Text style={{ fontSize: 12, fontWeight: "800", color: active ? accent : "#9898a8" }}>
                     {m.id === me ? "You" : m.name}
                   </Text>

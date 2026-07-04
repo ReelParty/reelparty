@@ -9,8 +9,8 @@ export interface SharePayload {
 }
 
 export interface PlatformBridge {
-  /** Origin used to build shareable invite links (e.g. https://reelparty.app). */
-  webOrigin: string;
+  /** Resolve the web app origin for shareable invite links (called at share time). */
+  getWebOrigin(): string;
   /** Read a URL from the clipboard (returns "" if unavailable/denied). */
   readClipboard(): Promise<string>;
   /** Native share sheet; resolve true if shared. Returns false to fall back. */
@@ -22,5 +22,5 @@ export interface PlatformBridge {
 }
 
 export function inviteUrl(bridge: PlatformBridge, code: string): string {
-  return `${bridge.webOrigin.replace(/\/$/, "")}/join/${encodeURIComponent(code)}`;
+  return `${bridge.getWebOrigin().replace(/\/$/, "")}/join/${encodeURIComponent(code)}`;
 }

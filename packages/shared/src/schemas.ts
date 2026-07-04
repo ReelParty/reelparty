@@ -13,6 +13,7 @@ export const memberSchema = z.object({
   id: z.string(),
   name: z.string(),
   color: z.string(),
+  avatarFace: z.number().int().min(0).max(29).optional(),
   joinedAt: z.string().default(""),
 });
 
@@ -106,4 +107,5 @@ export const metaResult = z.object({
   title: z.string(),
   creator: z.string(),
   thumbnail: z.string(),
+  url: z.string().optional(),
 });

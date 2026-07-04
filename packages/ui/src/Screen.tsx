@@ -27,10 +27,9 @@ export function Screen({
   if (Platform.OS === "web") {
     const webShell: ViewStyle = {
       height: "100dvh" as ViewStyle["height"],
-      backgroundColor: pageBg,
     };
     return (
-      <View style={webShell}>
+      <View className="rp-screen-shell" style={webShell}>
         <View className={columnClass(className)} style={columnStyle}>
           {children}
         </View>

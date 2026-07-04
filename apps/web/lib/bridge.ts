@@ -2,9 +2,9 @@ import type { PlatformBridge } from "@reelparty/app";
 
 /** Web platform bridge (clipboard, Web Share API, new-tab open). */
 export const webBridge: PlatformBridge = {
-  get webOrigin() {
+  getWebOrigin() {
     if (typeof window !== "undefined") return window.location.origin;
-    return process.env.NEXT_PUBLIC_WEB_ORIGIN || "https://reelparty.app";
+    return process.env.NEXT_PUBLIC_WEB_ORIGIN ?? "http://localhost:3000";
   },
   async readClipboard() {
     try {

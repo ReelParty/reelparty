@@ -1,10 +1,11 @@
 import * as Clipboard from "expo-clipboard";
 import { Linking, Share } from "react-native";
 import type { PlatformBridge } from "@reelparty/app";
+import { WEB_ORIGIN } from "./webOrigin";
 
 /** Native platform bridge (Expo clipboard, RN share sheet, deep open). */
 export const nativeBridge: PlatformBridge = {
-  webOrigin: process.env.EXPO_PUBLIC_WEB_ORIGIN || "https://reelparty.app",
+  getWebOrigin: () => WEB_ORIGIN,
   async readClipboard() {
     try {
       return (await Clipboard.getStringAsync()) || "";

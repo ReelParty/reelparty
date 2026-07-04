@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import type { UpdateFilter } from "mongodb";
-import { avatarColorFor, isValidReaction } from "@reelparty/shared";
+import { avatarColorFor, avatarIndexFor, isValidReaction } from "@reelparty/shared";
 import type {
   AddVideoInput,
   CreatePartyInput,
@@ -85,6 +85,7 @@ export async function createParty(input: CreatePartyInput): Promise<void> {
         party_code: input.code,
         name: input.hostName,
         color: avatarColorFor(input.hostId),
+        avatar_face: avatarIndexFor(input.hostId),
       },
       $setOnInsert: { joined_at: now },
     },
@@ -102,6 +103,7 @@ export async function joinParty(input: JoinPartyInput): Promise<void> {
         party_code: input.code,
         name: input.name,
         color: avatarColorFor(input.id),
+        avatar_face: avatarIndexFor(input.id),
       },
       $setOnInsert: { joined_at: nowIso() },
     },

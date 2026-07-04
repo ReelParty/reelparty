@@ -70,7 +70,7 @@ export function ViewersSheet({
               key={w.id}
               className="mb-1 flex-row items-center gap-2 rounded-xl border-2 border-border bg-surface py-1 pl-1.5 pr-2.5"
             >
-              <Avatar id={w.id} name={w.name} sm />
+              <Avatar id={w.id} name={w.name} color={w.color} faceIndex={w.avatarFace} sm />
               <View className="min-w-0 flex-1 flex-row items-center gap-1">
                 <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "800" }}>
                   {memberLabel(w)}

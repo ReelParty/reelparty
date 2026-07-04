@@ -209,6 +209,14 @@ export function Sheet({
     if (!panel) return;
 
     const target = e.target as HTMLElement | null;
+    if (
+      target?.closest(
+        'input, textarea, button, select, a, label, [contenteditable="true"], [role="button"]',
+      )
+    ) {
+      return;
+    }
+
     const inDragZone = target?.closest(DRAG_ZONE);
 
     let scrollEl: HTMLElement | null = null;

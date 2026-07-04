@@ -26,6 +26,25 @@ export function detectPlatform(raw: string | null | undefined): DetectedLink | n
   }
   const ig = url.match(/instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/);
   if (ig) return { platform: "instagram", videoId: ig[1] ?? null, url };
+  const fbWatch = url.match(/fb\.watch\/([A-Za-z0-9_-]+)/);
+  if (fbWatch) return { platform: "facebook", videoId: fbWatch[1] ?? null, url };
+  if (/facebook\.com|fb\.com|m\.facebook\.com/.test(url)) {
+    const watchV = url.match(/[?&]v=(\d+)/);
+    if (/facebook\.com\/watch/.test(url) || /\/watch\/\?/.test(url)) {
+      return { platform: "facebook", videoId: watchV?.[1] ?? null, url };
+    }
+    const reel = url.match(/facebook\.com\/(?:reel|reels)\/(\d+)/);
+    if (reel) return { platform: "facebook", videoId: reel[1] ?? null, url };
+    const videos = url.match(/facebook\.com\/(?:[^/]+\/)?videos\/(\d+)/);
+    if (videos) return { platform: "facebook", videoId: videos[1] ?? null, url };
+    const shareV = url.match(/facebook\.com\/share\/v\/([^/?#]+)/);
+    if (shareV) return { platform: "facebook", videoId: shareV[1] ?? null, url };
+    const shareR = url.match(/facebook\.com\/share\/r\/([^/?#]+)/);
+    if (shareR) return { platform: "facebook", videoId: shareR[1] ?? null, url };
+    if (/video\.php/.test(url) && watchV) {
+      return { platform: "facebook", videoId: watchV[1] ?? null, url };
+    }
+  }
   return null;
 }
 

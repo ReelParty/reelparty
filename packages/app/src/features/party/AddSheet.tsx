@@ -4,35 +4,32 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Button, ButtonText, Heading, Muted, Spinner } from "@reelparty/ui";
 import { detectPlatform, normalizeClipboardText } from "@reelparty/shared";
-import { useApp } from "../../provider";
 import { Sheet } from "../../components/Sheet";
 import { Input } from "../../components/Input";
 
 export function AddSheet({
   open,
   adding,
+  prefill = "",
   onClose,
   onSubmit,
 }: {
   open: boolean;
   adding: boolean;
+  /** Set from a user-gesture handler (web requires clipboard read on click). */
+  prefill?: string;
   onClose: () => void;
   onSubmit: (url: string) => void;
 }) {
-  const { bridge } = useApp();
   const [value, setValue] = useState("");
 
-  // Try to pre-fill from the clipboard when the sheet opens.
   useEffect(() => {
     if (!open) {
       setValue("");
       return;
     }
-    void bridge.readClipboard().then((text) => {
-      const normalized = normalizeClipboardText(text);
-      if (normalized && detectPlatform(normalized)) setValue(normalized);
-    });
-  }, [open, bridge]);
+    setValue(prefill);
+  }, [open, prefill]);
 
   const normalized = normalizeClipboardText(value);
   const valid = !!detectPlatform(normalized);
@@ -42,7 +39,7 @@ export function AddSheet({
       <View className="items-center">
         <Heading style={{ fontSize: 20 }}>Add a link</Heading>
         <Muted className="mt-1 text-center text-[13px]">
-          TikTok, Instagram Reels, or YouTube Shorts
+          TikTok, Instagram Reels, Facebook, or YouTube Shorts
         </Muted>
       </View>
       <View className="mt-3 gap-3">

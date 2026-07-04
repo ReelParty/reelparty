@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const platformSchema = z.enum(["youtube", "tiktok", "instagram"]);
+export const platformSchema = z.enum(["youtube", "tiktok", "instagram", "facebook"]);
 
 export const partyCodeSchema = z
   .string()

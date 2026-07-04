@@ -11,7 +11,7 @@ export interface SharePayload {
 export interface PlatformBridge {
   /** Resolve the web app origin for shareable invite links (called at share time). */
   getWebOrigin(): string;
-  /** Read a URL from the clipboard (returns "" if unavailable/denied). */
+  /** Read a URL from the clipboard (returns "" if unavailable/denied). On web, call from a user-gesture handler (e.g. button click). */
   readClipboard(): Promise<string>;
   /** Native share sheet; resolve true if shared. Returns false to fall back. */
   share(payload: SharePayload): Promise<boolean>;

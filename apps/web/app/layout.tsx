@@ -8,13 +8,13 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "ReelParty — Watch TikToks, Reels & Shorts together",
+  title: "ReelParty — Watch TikToks, Reels, Facebook & Shorts together",
   description:
-    "Spin up a watch party, drop in TikToks, Reels and YouTube Shorts, and react together in real time.",
+    "Spin up a watch party, drop in TikToks, Reels, Facebook and YouTube Shorts, and react together in real time.",
   manifest: "/manifest.webmanifest",
   openGraph: {
     title: "ReelParty",
-    description: "Watch TikToks, Reels & Shorts together",
+    description: "Watch TikToks, Reels, Facebook & Shorts together",
     images: ["/api/og/default.svg"],
   },
 };

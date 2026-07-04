@@ -142,6 +142,37 @@ export async function fetchMeta(rawUrl: string): Promise<VideoMeta> {
     };
   }
 
+  if (platform === "facebook") {
+    const resolved = await resolveUrl(url);
+    const oembed = await fetchOembed(
+      "https://www.facebook.com/plugins/video/oembed.json/?url=",
+      resolved,
+    );
+    if (oembed?.thumbnail_url) {
+      return {
+        title: oembed.title || defaultTitle(platform),
+        creator: oembed.author_name || "",
+        thumbnail: oembed.thumbnail_url,
+        url: resolved,
+      };
+    }
+    const og = await scrapeOg(resolved, IG_UA);
+    if (og) {
+      return {
+        title: og.title || defaultTitle(platform),
+        creator: og.creator,
+        thumbnail: og.thumbnail,
+        url: resolved,
+      };
+    }
+    return {
+      title: defaultTitle(platform),
+      creator: "",
+      thumbnail: "",
+      url: resolved,
+    };
+  }
+
   // instagram
   const og = await scrapeOg(url, IG_UA);
   if (og) {

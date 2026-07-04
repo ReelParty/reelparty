@@ -16,12 +16,14 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   youtube: "YouTube",
   tiktok: "TikTok",
   instagram: "Instagram",
+  facebook: "Facebook",
 };
 
 export const PLATFORM_COLOR: Record<Platform, string> = {
   youtube: "#FF0000",
   tiktok: "#000000",
   instagram: "#C13584",
+  facebook: "#1877F2",
 };
 
 export const INSTAGRAM_GRADIENT = [
@@ -56,6 +58,7 @@ export const QUEUE_SORTS: ReadonlyArray<{ id: QueueSortId; label: string }> = [
 export function defaultTitle(platform: Platform): string {
   if (platform === "tiktok") return "TikTok video";
   if (platform === "instagram") return "Instagram Reel";
+  if (platform === "facebook") return "Facebook video";
   return "YouTube Short";
 }
 

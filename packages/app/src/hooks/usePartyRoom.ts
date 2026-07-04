@@ -104,7 +104,7 @@ export function usePartyRoom(code: string) {
       if (!me || !party) return;
       const det = detectPlatform(normalizeClipboardText(raw));
       if (!det) {
-        toast("That's not a TikTok, Reels, or Shorts link 🙈");
+        toast("That's not a TikTok, Reels, Facebook, or Shorts link 🙈");
         return;
       }
       setAdding(true);
@@ -255,7 +255,7 @@ export function usePartyRoom(code: string) {
       "Someone";
     const shared = await bridge.share({
       title: `Join ${hostName}'s ReelParty 🎬`,
-      text: `Party code ${party.code} — watch TikToks, Reels & Shorts together`,
+      text: `Party code ${party.code} — watch TikToks, Reels, Facebook & Shorts together`,
       url: link,
     });
     if (!shared) {

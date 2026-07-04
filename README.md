@@ -1,6 +1,6 @@
 # ReelParty
 
-Watch TikToks, Reels & YouTube Shorts together with friends — build a shared
+Watch TikToks, Reels, Facebook & YouTube Shorts together with friends — build a shared
 queue, react with emojis, and see who watched what.
 
 A **universal monorepo**: a Next.js web app and an Expo iOS/Android app that
@@ -167,7 +167,7 @@ platform file or the `PlatformBridge`.
 - Web and mobile share one tRPC API and one MongoDB database.
 - Clipboard auto-read works on localhost/HTTPS; over a plain LAN IP browsers
   block it, so guests use the paste sheet.
-- YouTube Shorts fetch real metadata and play embedded. TikTok/Reels show
+- YouTube Shorts fetch real metadata and play embedded. TikTok/Reels/Facebook show
   platform cards (in-app playback needs each platform's SDK).
 - Invite links resolve to `/join/<code>`, which is an RSC page on web with full
   Open Graph metadata and a generated share image at `/api/og/<code>.svg`.

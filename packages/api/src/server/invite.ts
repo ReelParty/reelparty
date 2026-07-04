@@ -31,7 +31,7 @@ export function inviteMeta(
   const safeHost = ctx.hostName || "Someone";
   const title = `Join ${safeHost}'s ReelParty 🎬`;
   const peopleLine = ctx.memberCount > 1 ? `${ctx.memberCount} people waiting · ` : "";
-  const description = `${peopleLine}Party code ${ctx.code} · Watch TikToks, Reels & Shorts together`;
+  const description = `${peopleLine}Party code ${ctx.code} · Watch TikToks, Reels, Facebook & Shorts together`;
   const pageUrl = `${ctx.baseUrl}/join/${ctx.code}`;
   const imageUrl = `${ctx.baseUrl}/api/og/${ctx.code}.svg`;
   return {
@@ -84,7 +84,7 @@ export function renderOgSvg({ hostName, code, memberCount }: InviteContext): str
   <text x="120" y="310" fill="#9898a8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="30" font-weight="700">${countLabel}</text>
   <rect x="120" y="360" width="420" height="120" rx="24" fill="#1c1c26" stroke="#1cb0f6" stroke-width="4"/>
   <text x="330" y="440" fill="#1cb0f6" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="64" font-weight="800" text-anchor="middle" letter-spacing="16">${partyCode}</text>
-  <text x="120" y="545" fill="#6b6b7b" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700">TikTok · Reels · YouTube Shorts</text>
+  <text x="120" y="545" fill="#6b6b7b" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700">TikTok · Reels · Facebook · YouTube Shorts</text>
   <g transform="translate(880, 330)" filter="url(#glow)">
     <rect x="0" y="0" width="180" height="120" rx="18" fill="url(#blue)"/>
     <polygon points="70,35 70,85 115,60" fill="#fff"/>
@@ -113,7 +113,7 @@ export function renderDefaultOgSvg(): string {
   <rect x="80" y="80" width="1040" height="470" rx="36" fill="#15151c" stroke="#2a2a38" stroke-width="3"/>
   <rect x="80" y="80" width="1040" height="8" rx="4" fill="url(#green)"/>
   <text x="600" y="220" fill="#ececf1" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="72" font-weight="800" text-anchor="middle">ReelParty 🎬</text>
-  <text x="600" y="300" fill="#9898a8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="34" font-weight="700" text-anchor="middle">Watch TikToks, Reels &amp; Shorts together</text>
+  <text x="600" y="300" fill="#9898a8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="34" font-weight="700" text-anchor="middle">Watch TikToks, Reels, Facebook &amp; Shorts together</text>
   <text x="600" y="420" fill="#1cb0f6" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="48" font-weight="800" text-anchor="middle">Join the party</text>
 </svg>`;
 }

@@ -14,8 +14,9 @@ import {
   Text,
 } from "@reelparty/ui";
 import type { QueueItem } from "@reelparty/shared";
+import { detectPlatform, normalizeClipboardText } from "@reelparty/shared";
 import { usePartyRoom } from "../../hooks/usePartyRoom";
-import { useToast } from "../../provider";
+import { useApp, useToast } from "../../provider";
 import { PartyHeader } from "./PartyHeader";
 import { MembersPill } from "./MembersPill";
 import { QueueControls } from "./QueueControls";
@@ -27,8 +28,10 @@ import { Sheet } from "../../components/Sheet";
 
 export function PartyScreen({ code }: { code: string }) {
   const room = usePartyRoom(code);
+  const { bridge } = useApp();
   const toast = useToast();
   const [addOpen, setAddOpen] = useState(false);
+  const [addPrefill, setAddPrefill] = useState("");
   const [reactVideo, setReactVideo] = useState<QueueItem | null>(null);
   const [viewersVideo, setViewersVideo] = useState<QueueItem | null>(null);
   const [deleteVideo, setDeleteVideo] = useState<QueueItem | null>(null);
@@ -45,6 +48,16 @@ export function PartyScreen({ code }: { code: string }) {
 
   const liveReaction = (v: QueueItem) =>
     party.queue.find((q) => q.id === v.id)?.reactions?.[me] ?? null;
+
+  const openAddSheet = () => {
+    void bridge.readClipboard().then((text) => {
+      const normalized = normalizeClipboardText(text);
+      const prefill =
+        normalized && detectPlatform(normalized) ? normalized : "";
+      setAddPrefill(prefill);
+      setAddOpen(true);
+    });
+  };
 
   return (
     <>
@@ -137,7 +150,7 @@ export function PartyScreen({ code }: { code: string }) {
         </ScrollView>
 
         <View className="absolute bottom-6 right-5">
-          <Button tone="green" onPress={() => setAddOpen(true)}>
+          <Button tone="green" onPress={openAddSheet}>
             <Icons.Plus size={22} color="#fff" />
             <ButtonText>ADD VIDEO</ButtonText>
           </Button>
@@ -147,6 +160,7 @@ export function PartyScreen({ code }: { code: string }) {
       <AddSheet
         open={addOpen}
         adding={room.adding}
+        prefill={addPrefill}
         onClose={() => setAddOpen(false)}
         onSubmit={async (url) => {
           await room.addVideo(url);

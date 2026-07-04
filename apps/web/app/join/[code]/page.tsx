@@ -24,7 +24,7 @@ export async function generateMetadata({
   if (!ctx) {
     return {
       title: `Join the ReelParty · ${code}`,
-      description: "Watch TikToks, Reels & Shorts together",
+      description: "Watch TikToks, Reels, Facebook & Shorts together",
     };
   }
 

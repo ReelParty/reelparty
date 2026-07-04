@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { Heading, Muted, PlatformLogo, Text } from "@reelparty/ui";
 import { PLATFORM_COLOR, PLATFORM_LABEL, type Platform } from "@reelparty/shared";
 
-const PLATFORMS: Platform[] = ["tiktok", "youtube", "instagram"];
+const PLATFORMS: Platform[] = ["tiktok", "youtube", "instagram", "facebook"];
 
 export function WelcomeLockup() {
   return (

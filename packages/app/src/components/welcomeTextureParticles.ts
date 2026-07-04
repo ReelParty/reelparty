@@ -1,6 +1,6 @@
 import { WELCOME_TEXTURE_EMOJIS, type Platform } from "@reelparty/shared";
 
-const PLATFORMS: Platform[] = ["tiktok", "youtube", "instagram"];
+const PLATFORMS: Platform[] = ["tiktok", "youtube", "instagram", "facebook"];
 
 export type WelcomeTextureParticle = {
   id: number;

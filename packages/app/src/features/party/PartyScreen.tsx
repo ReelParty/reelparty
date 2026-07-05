@@ -31,6 +31,7 @@ import { CaughtUpConfetti } from "./CaughtUpConfetti";
 import { CaughtUpEmojiPop } from "./CaughtUpEmojiPop";
 
 const SPOT_DISMISS_BEAT_MS = 500;
+const SPOT_DISMISS_FADE_MS = 400;
 const CAUGHT_UP_CONFETTI_MS = 2200;
 
 function HideWatchedPill({
@@ -120,14 +121,37 @@ export function PartyScreen({ code }: { code: string }) {
     [],
   );
 
-  const dismissMySpot = useCallback(() => {
-    if (spotDismissing || !spotPinsQueue) return;
+  const dismissSpotFromEmptyTap = useCallback(() => {
+    if (!room.myWatchingId || spotDismissing) return;
+
+    if (!room.hideWatched) {
+      void clearMySpot();
+      return;
+    }
+
+    const spotVisible = room.displayedQueue.some(
+      (v) => v.id === room.myWatchingId,
+    );
+
     setSpotDismissing(true);
     const beatTimer = setTimeout(() => {
       setSpotFading(true);
+      if (!spotVisible) {
+        const fadeTimer = setTimeout(() => {
+          completeSpotDismiss();
+        }, SPOT_DISMISS_FADE_MS);
+        dismissTimersRef.current = [beatTimer, fadeTimer];
+      }
     }, SPOT_DISMISS_BEAT_MS);
     dismissTimersRef.current = [beatTimer];
-  }, [spotDismissing, spotPinsQueue]);
+  }, [
+    room.myWatchingId,
+    room.hideWatched,
+    room.displayedQueue,
+    spotDismissing,
+    clearMySpot,
+    completeSpotDismiss,
+  ]);
 
   if (!party || !me) {
     return (
@@ -145,6 +169,8 @@ export function PartyScreen({ code }: { code: string }) {
   ).length;
   const hideWatchedHasNothingToHide =
     room.hideWatched && party.queue.length > 0 && myWatchedCount === 0;
+
+  const hasMySpot = !!room.myWatchingId;
 
   const openAddSheet = () => {
     dismissToast();
@@ -165,6 +191,10 @@ export function PartyScreen({ code }: { code: string }) {
   return (
     <>
       <Screen>
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={hasMySpot ? dismissSpotFromEmptyTap : undefined}
+        >
         <PartyHeader
           code={party.code}
           onLeave={room.leave}
@@ -186,8 +216,12 @@ export function PartyScreen({ code }: { code: string }) {
         <ScrollView
           className="mt-4 flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 96 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 96 }}
         >
+          <Pressable
+            onPress={hasMySpot ? dismissSpotFromEmptyTap : undefined}
+            style={{ flexGrow: 1 }}
+          >
           <View className="mb-2.5 flex-row items-start justify-between gap-2.5">
             <View style={{ gap: 1 }}>
               <Heading style={{ fontSize: 18, lineHeight: 19 }}>The Queue</Heading>
@@ -261,11 +295,7 @@ export function PartyScreen({ code }: { code: string }) {
               )}
             </View>
           ) : (
-            <Pressable
-              onPress={
-                spotPinsQueue && !spotDismissing ? dismissMySpot : undefined
-              }
-              disabled={!spotPinsQueue || spotDismissing}
+            <View
               style={{
                 marginTop: 16,
                 minHeight: spotPinsQueue ? 400 : undefined,
@@ -309,9 +339,11 @@ export function PartyScreen({ code }: { code: string }) {
                   );
                 })}
               </View>
-            </Pressable>
+            </View>
           )}
+          </Pressable>
         </ScrollView>
+        </Pressable>
 
         <View className="absolute bottom-6 right-5">
           <Button tone="green" loading={room.adding} onPress={openAddSheet}>

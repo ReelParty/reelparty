@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { Modal, Platform, StyleSheet, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
   runOnJS,
@@ -21,10 +22,12 @@ import { FullWindowOverlay } from "react-native-screens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ToastBubbleContent } from "./toast-bubble";
 import { ToastCtx, type ToastController } from "./toast-context";
-
-const TOAST_MS = 2200;
-const ENTER_MS = 280;
-const EXIT_MS = 200;
+import {
+  TOAST_ENTER_MS,
+  TOAST_EXIT_MS,
+  TOAST_MS,
+  TOAST_SWIPE_DISMISS_Y,
+} from "./toast-constants";
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -35,6 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(-18);
   const scale = useSharedValue(0.92);
+  const dragY = useSharedValue(0);
 
   const finishUnmount = useCallback(() => {
     setMounted(false);
@@ -45,10 +49,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     cancelAnimation(opacity);
     cancelAnimation(translateY);
     cancelAnimation(scale);
+    cancelAnimation(dragY);
     opacity.value = 0;
     translateY.value = -18;
     scale.value = 0.92;
-  }, [opacity, scale, translateY]);
+    dragY.value = 0;
+  }, [dragY, opacity, scale, translateY]);
 
   const dismissNow = useCallback(() => {
     sessionRef.current += 1;
@@ -62,7 +68,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const animateIn = useCallback(() => {
     resetMotion();
-    opacity.value = withTiming(1, { duration: ENTER_MS });
+    opacity.value = withTiming(1, { duration: TOAST_ENTER_MS });
     translateY.value = withSpring(0, {
       damping: 16,
       stiffness: 220,
@@ -75,19 +81,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     });
   }, [opacity, resetMotion, scale, translateY]);
 
-  const dismiss = useCallback(
-    (session: number) => {
+  const animateOut = useCallback(
+    (session: number, swipe = false) => {
       if (sessionRef.current !== session) return;
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
 
-      opacity.value = withTiming(0, { duration: EXIT_MS });
-      translateY.value = withTiming(-10, { duration: EXIT_MS });
-      scale.value = withTiming(0.96, { duration: EXIT_MS }, (finished) => {
+      opacity.value = withTiming(0, { duration: TOAST_EXIT_MS });
+      translateY.value = withTiming(swipe ? -56 : -10, { duration: TOAST_EXIT_MS });
+      scale.value = withTiming(0.96, { duration: TOAST_EXIT_MS });
+      dragY.value = withTiming(0, { duration: TOAST_EXIT_MS }, (finished) => {
         if (finished && sessionRef.current === session) {
           runOnJS(finishUnmount)();
         }
       });
     },
-    [finishUnmount, opacity, scale, translateY],
+    [dragY, finishUnmount, opacity, scale, translateY],
+  );
+
+  const dismissInteractive = useCallback(() => {
+    animateOut(sessionRef.current, true);
+  }, [animateOut]);
+
+  const dismiss = useCallback(
+    (session: number) => {
+      animateOut(session, false);
+    },
+    [animateOut],
   );
 
   const show = useCallback(
@@ -115,9 +137,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetY(-8)
+        .failOffsetX([-24, 24])
+        .shouldCancelWhenOutside(false)
+        .onUpdate((e) => {
+          if (e.translationY < 0) {
+            dragY.value = e.translationY;
+          }
+        })
+        .onEnd((e) => {
+          if (
+            e.translationY < TOAST_SWIPE_DISMISS_Y ||
+            e.velocityY < -650
+          ) {
+            runOnJS(dismissInteractive)();
+            return;
+          }
+          dragY.value = withSpring(0, {
+            damping: 16,
+            stiffness: 220,
+          });
+        }),
+    [dismissInteractive, dragY],
+  );
+
   const toastStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    transform: [
+      { translateY: translateY.value + dragY.value },
+      { scale: scale.value },
+    ],
     alignSelf: "center",
     width: "100%",
     maxWidth: "92%",
@@ -133,9 +185,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       pointerEvents="box-none"
       style={[styles.overlay, { paddingTop: insets.top + 16 }]}
     >
-      <Animated.View style={toastStyle} pointerEvents="none">
-        <ToastBubbleContent msg={msg} />
-      </Animated.View>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={toastStyle}>
+          <ToastBubbleContent msg={msg} />
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 

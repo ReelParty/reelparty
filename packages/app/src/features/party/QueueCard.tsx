@@ -1,6 +1,6 @@
 "use client";
 
-import { Pressable, View } from "react-native";
+import { Platform, Pressable, Text as RNText, View } from "react-native";
 import { Avatar, Card, Icons, PlatformBadge, Text } from "@reelparty/ui";
 import {
   formatAddedDate,
@@ -125,12 +125,43 @@ export function QueueCard({
 
           <Pressable
             onPress={onReact}
-            accessibilityLabel="React to video"
-            className="absolute bottom-1.5 left-1/2 h-10 w-10 items-center justify-center rounded-xl"
-            style={{ backgroundColor: "rgba(0,0,0,0.6)", marginLeft: -20 }}
+            accessibilityLabel={
+              myReaction
+                ? `Your reaction: ${myReaction}. Tap to change`
+                : "React to video"
+            }
+            className="absolute bottom-1.5 left-1/2 rounded-xl"
+            style={{
+              width: 40,
+              height: 40,
+              marginLeft: -20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: myReaction ? "#fff" : "rgba(0,0,0,0.6)",
+              ...(myReaction
+                ? {
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.28,
+                    shadowRadius: 4,
+                    elevation: 4,
+                  }
+                : null),
+            }}
           >
             {myReaction ? (
-              <Text style={{ fontSize: 18 }}>{myReaction}</Text>
+              <RNText
+                style={{
+                  fontSize: 20,
+                  lineHeight: 20,
+                  textAlign: "center",
+                  ...(Platform.OS === "android"
+                    ? { includeFontPadding: false, textAlignVertical: "center" }
+                    : null),
+                }}
+              >
+                {myReaction}
+              </RNText>
             ) : (
               <Icons.Smile size={16} color="#fff" />
             )}

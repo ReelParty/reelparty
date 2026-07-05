@@ -65,3 +65,33 @@ export function defaultTitle(platform: Platform): string {
 export function ytThumb(id: string): string {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 }
+
+/** Random toast shown when a video is successfully added to the queue. */
+export const ADD_VIDEO_TOASTS = [
+  "Oh that's a good one!",
+  "You have such great taste",
+  "Chef's kiss 👌",
+  "Excellent choice",
+  "This party just got better",
+  "Okay, taste icon",
+  "We needed this one",
+  "Fire pick 🔥",
+  "The queue thanks you",
+  "Iconic addition",
+  "You understood the assignment",
+  "Certified banger incoming",
+  "Your taste? Immaculate.",
+  "Now we're talking",
+  "Bold move — respect",
+  "Adding this before anyone changes their mind",
+  "That's going straight to the queue",
+  "The people are gonna love this",
+  "Elite curator behavior",
+  "Consider the vibe elevated ✨",
+] as const;
+
+export function pickAddVideoToast(): string {
+  const line =
+    ADD_VIDEO_TOASTS[Math.floor(Math.random() * ADD_VIDEO_TOASTS.length)]!;
+  return `Video added!\n${line}`;
+}

@@ -44,8 +44,6 @@ export function QueueControls({
   queueLength,
   adders,
   me,
-  hideWatched,
-  setHideWatched,
   filterUserId,
   setFilterUserId,
   queueSort,
@@ -56,8 +54,6 @@ export function QueueControls({
   queueLength: number;
   adders: ResolvedMember[];
   me: string;
-  hideWatched: boolean;
-  setHideWatched: (fn: (v: boolean) => boolean) => void;
   filterUserId: string | null;
   setFilterUserId: (fn: (v: string | null) => string | null) => void;
   queueSort: QueueSortId;
@@ -67,23 +63,6 @@ export function QueueControls({
 }) {
   return (
     <View className="gap-2.5">
-      {queueLength > 0 ? (
-        <Pill
-          active={hideWatched}
-          onPress={() => setHideWatched((on) => !on)}
-          label={hideWatched ? "Show watched videos" : "Hide watched videos"}
-        >
-          {hideWatched ? (
-            <Icons.EyeOff size={14} color={hideWatched ? "#1cb0f6" : "#9898a8"} />
-          ) : (
-            <Icons.Eye size={14} color="#9898a8" />
-          )}
-          <Text style={{ fontSize: 12, fontWeight: "800", color: hideWatched ? "#1cb0f6" : "#9898a8" }}>
-            Hide watched
-          </Text>
-        </Pill>
-      ) : null}
-
       {adders.length > 1 ? (
         <View className="flex-row items-center gap-2">
           <Icons.Filter size={14} color="#6b6b7b" />

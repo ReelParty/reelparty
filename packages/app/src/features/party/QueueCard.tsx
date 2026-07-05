@@ -11,6 +11,8 @@ import {
 } from "@reelparty/shared";
 import { Thumb } from "../../components/Thumb";
 import { ReactionChips } from "../../components/ReactionChips";
+import { ReactionBurst } from "./ReactionBurst";
+import type { ReactionBurstPayload } from "./reactionBurstParticles";
 
 interface QueueCardProps {
   video: QueueItem;
@@ -18,8 +20,12 @@ interface QueueCardProps {
   me: string;
   isHost: boolean;
   isMySpot: boolean;
+  /** When false during dismiss, blue YOUR SPOT styling is stripped immediately. */
+  showAsMySpot?: boolean;
   iWatched: boolean;
   myReaction: string | null;
+  reactionBurst?: ReactionBurstPayload | null;
+  onReactionBurstDone?: () => void;
   onPlay: () => void;
   onReact: () => void;
   onRemove: () => void;
@@ -33,25 +39,29 @@ export function QueueCard({
   me,
   isHost,
   isMySpot,
+  showAsMySpot,
   iWatched,
   myReaction,
+  reactionBurst,
+  onReactionBurstDone,
   onPlay,
   onReact,
   onRemove,
   onUnwatch,
   onViewers,
 }: QueueCardProps) {
+  const highlightSpot = showAsMySpot ?? isMySpot;
   return (
     <Card
       className="overflow-hidden"
       style={{
-        borderColor: isMySpot ? "#1cb0f6" : "#3b3b3b",
+        borderColor: highlightSpot ? "#1cb0f6" : "#3b3b3b",
       }}
     >
       <Pressable onPress={onPlay}>
         <View className="relative aspect-square w-full bg-black">
           <Thumb video={video} />
-          {isMySpot ? (
+          {highlightSpot ? (
             <View
               pointerEvents="none"
               className="absolute inset-0"
@@ -81,6 +91,23 @@ export function QueueCard({
               </Text>
             </Pressable>
           ) : null}
+
+          <View
+            pointerEvents="none"
+            className="absolute inset-0 z-[4] overflow-hidden"
+          >
+            {reactionBurst ? (
+              <ReactionBurst
+                key={`${reactionBurst.id}-${reactionBurst.emoji}`}
+                burstId={reactionBurst.id}
+                emoji={reactionBurst.emoji}
+                name={reactionBurst.name}
+                userId={reactionBurst.userId}
+                avatarFace={reactionBurst.avatarFace}
+                onDone={() => onReactionBurstDone?.()}
+              />
+            ) : null}
+          </View>
 
           {hasActivity(video) ? (
             <Pressable

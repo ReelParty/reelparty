@@ -9,6 +9,8 @@ export interface ButtonProps extends Omit<PressableProps, "children" | "style"> 
   full?: boolean;
   sm?: boolean;
   disabled?: boolean;
+  /** Disables press but keeps full opacity (e.g. inline spinner). */
+  loading?: boolean;
 }
 
 /**
@@ -21,21 +23,23 @@ export function Button({
   full,
   sm,
   disabled,
+  loading,
   ...rest
 }: ButtonProps) {
   const [pressed, setPressed] = useState(false);
   const p = PAL[tone];
   const lip = pressed ? 2 : 5;
+  const inactive = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
+      disabled={inactive}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
       className={cn(full && "w-full", "self-start", full && "self-stretch")}
       style={{
-        opacity: disabled ? 0.45 : 1,
+        opacity: loading ? 1 : inactive ? 0.45 : 1,
         transform: [{ translateY: pressed ? 3 : 0 }],
       }}
       {...rest}

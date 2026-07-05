@@ -129,6 +129,7 @@ export function Sheet({
         d.startOffset = offsetYRef.current;
         setDragging(true);
         panel.style.animation = "none";
+        panel.setPointerCapture(e.pointerId);
       }
 
       e.preventDefault();
@@ -211,7 +212,7 @@ export function Sheet({
     const target = e.target as HTMLElement | null;
     if (
       target?.closest(
-        'input, textarea, button, select, a, label, [contenteditable="true"], [role="button"]',
+        'input, textarea, button, select, a, label, [contenteditable="true"], [role="button"], [role="link"], [tabindex="0"]',
       )
     ) {
       return;
@@ -244,9 +245,8 @@ export function Sheet({
     };
 
     attachDragListeners();
-    panel.setPointerCapture(e.pointerId);
-
     if (inDragZone) {
+      panel.setPointerCapture(e.pointerId);
       panel.style.animation = "none";
       setDragging(true);
     }

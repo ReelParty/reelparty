@@ -76,4 +76,5 @@ export function AppProvider({
   );
 }
 
-export { useToast } from "./toast";
+export { useToast, useToastDismiss } from "./toast-context";
+export { ToastProvider } from "./toast";

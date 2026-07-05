@@ -1,4 +1,5 @@
-export { AppProvider, useApp, useToast, type AppProviderProps } from "./provider";
+export { AppProvider, useApp, type AppProviderProps } from "./provider";
+export { useToast, useToastDismiss } from "./provider/toast-context";
 export {
   type PlatformBridge,
   type SharePayload,

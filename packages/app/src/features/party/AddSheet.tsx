@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { Button, ButtonText, Heading, Muted, Spinner } from "@reelparty/ui";
 import { detectPlatform, normalizeClipboardText } from "@reelparty/shared";
 import { Sheet } from "../../components/Sheet";
+import { SheetHeader } from "../../components/SheetHeader";
 import { Input } from "../../components/Input";
 
 export function AddSheet({
@@ -36,12 +37,12 @@ export function AddSheet({
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <View className="items-center">
+      <SheetHeader>
         <Heading style={{ fontSize: 20 }}>Add a link</Heading>
         <Muted className="mt-1 text-center text-[13px]">
           TikTok, Instagram Reels, Facebook, or YouTube Shorts
         </Muted>
-      </View>
+      </SheetHeader>
       <View className="mt-3 gap-3">
         <Input
           placeholder="https://…"
@@ -56,7 +57,8 @@ export function AddSheet({
         <Button
           tone="green"
           full
-          disabled={adding || !valid}
+          loading={adding}
+          disabled={!valid}
           onPress={() => onSubmit(normalized)}
         >
           {adding ? <Spinner size="small" color="#fff" /> : <ButtonText>ADD TO QUEUE</ButtonText>}

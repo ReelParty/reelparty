@@ -4,6 +4,7 @@ import { Pressable, View } from "react-native";
 import { Heading, Text } from "@reelparty/ui";
 import { CUSTOM_EMOJIS, REACTIONS } from "@reelparty/shared";
 import { Sheet } from "../../components/Sheet";
+import { SheetHeader } from "../../components/SheetHeader";
 
 export function ReactionPicker({
   open,
@@ -19,15 +20,16 @@ export function ReactionPicker({
   const all = [...REACTIONS, ...CUSTOM_EMOJIS.filter((e) => !REACTIONS.includes(e as never))];
   return (
     <Sheet open={open} onClose={onClose}>
-      <View className="items-center">
+      <SheetHeader>
         <Heading style={{ fontSize: 20 }}>Pick a reaction</Heading>
-      </View>
+      </SheetHeader>
       <View className="mt-4 flex-row flex-wrap justify-center gap-2">
         {all.map((emoji) => {
           const on = current === emoji;
           return (
             <Pressable
               key={emoji}
+              accessibilityRole="button"
               onPress={() => onPick(emoji)}
               accessibilityLabel={`React ${emoji}`}
               className="h-12 w-12 items-center justify-center rounded-xl border-2"

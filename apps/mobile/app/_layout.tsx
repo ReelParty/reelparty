@@ -1,3 +1,4 @@
+import "react-native-reanimated";
 import "../global.css";
 
 import { Fredoka_600SemiBold, Fredoka_700Bold } from "@expo-google-fonts/fredoka";

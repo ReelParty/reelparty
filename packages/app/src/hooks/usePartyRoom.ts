@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@reelparty/api";
 import {
   detectPlatform,
   normalizeClipboardText,
+  pickAddVideoToast,
   queueAdders,
   resolveMember,
   rid,
+  avatarIndexFor,
   sortMembersForDisplay,
   sortQueue,
   type PartyView,
@@ -16,6 +18,7 @@ import {
   type Reactions,
   type SortDir,
 } from "@reelparty/shared";
+import type { ReactionBurstPayload } from "../features/party/reactionBurstParticles";
 import { useApp, useToast } from "../provider";
 import { inviteUrl } from "../platform/bridge";
 import { useAppNavigation } from "../navigation/useAppNavigation";
@@ -40,26 +43,145 @@ export function usePartyRoom(code: string) {
   const [queueSortDir, setQueueSortDir] = useState<SortDir>("asc");
   const [myWatchingId, setMyWatchingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+  const userChangedFiltersRef = useRef(false);
+  const [activeReactionBursts, setActiveReactionBursts] = useState<
+    Record<string, ReactionBurstPayload>
+  >({});
+  const burstIdRef = useRef(0);
+  const prevReactionsRef = useRef<Record<string, Record<string, string>>>({});
+  const reactionsInitRef = useRef(false);
+  const localReactionAtRef = useRef<Record<string, number>>({});
 
   // Hydrate persisted session + filters when the code changes.
   useEffect(() => {
     if (!code) return;
+    let active = true;
+    userChangedFiltersRef.current = false;
+    setFiltersHydrated(false);
+
     void session.loadSession().then((s) => {
+      if (!active) return;
       if (s?.code === code && s.watchingVideoId) setMyWatchingId(s.watchingVideoId);
     });
+
     void session.loadQueueFilters(code).then((f) => {
-      setHideWatched(f.hideWatched);
-      setFilterUserId(f.filterUserId);
+      if (!active) return;
+      if (!userChangedFiltersRef.current) {
+        setHideWatched(f.hideWatched);
+        setFilterUserId(f.filterUserId);
+      }
+      setFiltersHydrated(true);
     });
+
+    return () => {
+      active = false;
+    };
   }, [code, session]);
 
   useEffect(() => {
-    if (code) void session.saveSession(code, myWatchingId ?? undefined);
+    reactionsInitRef.current = false;
+    prevReactionsRef.current = {};
+    setActiveReactionBursts({});
+  }, [code]);
+
+  const completeReactionBurst = useCallback((videoId: string, burstId: number) => {
+    setActiveReactionBursts((active) => {
+      if (active[videoId]?.id !== burstId) return active;
+      const updated = { ...active };
+      delete updated[videoId];
+      return updated;
+    });
+  }, []);
+
+  const spawnReactionBurst = useCallback(
+    (
+      videoId: string,
+      emoji: string,
+      member: { id: string; name: string; color: string; avatarFace?: number },
+    ) => {
+      if (!emoji || !member.name) return;
+      setActiveReactionBursts((active) => ({
+        ...active,
+        [videoId]: {
+          id: ++burstIdRef.current,
+          emoji,
+          name: member.name,
+          color: member.color,
+          userId: member.id,
+          avatarFace: member.avatarFace ?? avatarIndexFor(member.id),
+        },
+      }));
+    },
+    [],
+  );
+
+  const syncPrevReaction = useCallback(
+    (videoId: string, userId: string, emoji: string | null) => {
+      if (!prevReactionsRef.current[videoId]) prevReactionsRef.current[videoId] = {};
+      if (emoji) prevReactionsRef.current[videoId][userId] = emoji;
+      else delete prevReactionsRef.current[videoId][userId];
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!party?.queue || !party.members) return;
+
+    if (!reactionsInitRef.current) {
+      prevReactionsRef.current = Object.fromEntries(
+        party.queue.map((v) => [v.id, { ...(v.reactions || {}) }]),
+      );
+      reactionsInitRef.current = true;
+      return;
+    }
+
+    party.queue.forEach((v) => {
+      const prev = prevReactionsRef.current[v.id] || {};
+      const curr = v.reactions || {};
+      Object.entries(curr).forEach(([userId, emoji]) => {
+        if (prev[userId] === emoji) return;
+        const key = `${v.id}:${userId}`;
+        if (
+          userId === me &&
+          Date.now() - (localReactionAtRef.current[key] || 0) < 500
+        ) {
+          return;
+        }
+        const member = resolveMember(party, userId, v);
+        spawnReactionBurst(v.id, emoji, member);
+      });
+    });
+
+    prevReactionsRef.current = Object.fromEntries(
+      party.queue.map((v) => [v.id, { ...(v.reactions || {}) }]),
+    );
+  }, [party, me, spawnReactionBurst]);
+
+  const setHideWatchedTracked = useCallback(
+    (value: boolean | ((prev: boolean) => boolean)) => {
+      userChangedFiltersRef.current = true;
+      setHideWatched(value);
+    },
+    [],
+  );
+
+  const setFilterUserIdTracked = useCallback(
+    (value: string | null | ((prev: string | null) => string | null)) => {
+      userChangedFiltersRef.current = true;
+      setFilterUserId(value);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (code && myWatchingId) void session.saveSession(code, myWatchingId);
   }, [code, myWatchingId, session]);
 
   useEffect(() => {
-    if (code) void session.saveQueueFilters(code, { hideWatched, filterUserId });
-  }, [code, hideWatched, filterUserId, session]);
+    if (!code || !filtersHydrated) return;
+    void session.saveQueueFilters(code, { hideWatched, filterUserId });
+  }, [code, hideWatched, filterUserId, session, filtersHydrated]);
 
   // Kicked out / party gone → bail to home.
   useEffect(() => {
@@ -100,12 +222,17 @@ export function usePartyRoom(code: string) {
   /* ----------------------------- actions ----------------------------- */
 
   const addVideo = useCallback(
-    async (raw: string) => {
-      if (!me || !party) return;
+    async (
+      raw: string,
+      opts?: { suppressInvalidToast?: boolean },
+    ): Promise<boolean> => {
+      if (!me || !party) return false;
       const det = detectPlatform(normalizeClipboardText(raw));
       if (!det) {
-        toast("That's not a TikTok, Reels, Facebook, or Shorts link 🙈");
-        return;
+        if (!opts?.suppressInvalidToast) {
+          toast("That's not a TikTok, Reels, Facebook, or Shorts link 🙈");
+        }
+        return false;
       }
       setAdding(true);
       try {
@@ -129,10 +256,11 @@ export function usePartyRoom(code: string) {
           position: party.queue.length,
         });
         await invalidate();
-        const t = meta.title.slice(0, 28);
-        toast(`Added "${t}${meta.title.length > 28 ? "…" : ""}"`);
+        toast(pickAddVideoToast());
+        return true;
       } catch {
         toast("Couldn't add that video");
+        return false;
       } finally {
         setAdding(false);
       }
@@ -145,6 +273,11 @@ export function usePartyRoom(code: string) {
       if (!me) return;
       setMyWatchingId(video.id);
       await session.saveSession(code, video.id);
+      patchQueueItem(video.id, (v) => {
+        if (v.watchedBy.includes(me)) return v;
+        const watchedBy = [...v.watchedBy, me];
+        return { ...v, watchedBy, watchCount: watchedBy.length };
+      });
       bridge.openVideo(video.url);
       try {
         await playMut.mutateAsync({ code, videoId: video.id, userId: me });
@@ -153,7 +286,7 @@ export function usePartyRoom(code: string) {
         /* poll will reconcile */
       }
     },
-    [me, code, session, bridge, playMut, invalidate],
+    [me, code, session, bridge, playMut, invalidate, patchQueueItem],
   );
 
   const setReaction = useCallback(
@@ -164,6 +297,16 @@ export function usePartyRoom(code: string) {
       const next: Reactions = { ...(video.reactions || {}) };
       if (removing) delete next[me];
       else next[me] = reaction;
+
+      if (!removing) {
+        localReactionAtRef.current[`${video.id}:${me}`] = Date.now();
+        syncPrevReaction(video.id, me, reaction);
+        const member = party?.members.find((m) => m.id === me);
+        if (member) spawnReactionBurst(video.id, reaction, member);
+      } else {
+        syncPrevReaction(video.id, me, null);
+      }
+
       patchQueueItem(video.id, (v) => ({ ...v, reactions: next }));
       try {
         await reactMut.mutateAsync({
@@ -180,7 +323,7 @@ export function usePartyRoom(code: string) {
         toast("Couldn't save reaction");
       }
     },
-    [me, code, reactMut, patchQueueItem, toast],
+    [me, party, code, reactMut, patchQueueItem, toast, syncPrevReaction, spawnReactionBurst],
   );
 
   const unwatchVideo = useCallback(
@@ -216,14 +359,17 @@ export function usePartyRoom(code: string) {
           videoId: video.id,
           userId: me,
         });
-        if (video.id === myWatchingId) setMyWatchingId(null);
+        if (video.id === myWatchingId) {
+          setMyWatchingId(null);
+          await session.saveSession(code, null);
+        }
         await invalidate();
         toast("Removed from queue");
       } catch {
         toast("Couldn't remove video");
       }
     },
-    [me, code, removeMut, myWatchingId, invalidate, toast],
+    [me, code, removeMut, myWatchingId, invalidate, toast, session],
   );
 
   const kickMember = useCallback(
@@ -288,9 +434,30 @@ export function usePartyRoom(code: string) {
     return sortQueue(filtered, queueSort, queueSortDir);
   }, [party, me, hideWatched, filterUserId, myWatchingId, queueSort, queueSortDir]);
 
+  const queueWithoutSpotPin = useMemo(() => {
+    if (!party || !me) return [];
+    return party.queue.filter((v) => {
+      if (hideWatched && v.watchedBy?.includes(me)) return false;
+      if (filterUserId && v.addedById !== filterUserId) return false;
+      return true;
+    });
+  }, [party, me, hideWatched, filterUserId]);
+
+  const spotPinsQueue =
+    hideWatched &&
+    !!myWatchingId &&
+    queueWithoutSpotPin.length === 0 &&
+    displayedQueue.length === 1 &&
+    displayedQueue[0]?.id === myWatchingId;
+
   const mySpot = party?.queue.find((q) => q.id === myWatchingId) ?? null;
   const nowPlaying =
     party?.queue.find((q) => q.id === party.nowPlayingId) ?? null;
+
+  const clearMySpot = useCallback(async () => {
+    setMyWatchingId(null);
+    await session.saveSession(code, null);
+  }, [code, session]);
 
   return {
     me,
@@ -302,18 +469,21 @@ export function usePartyRoom(code: string) {
     sortedMembers,
     adders,
     displayedQueue,
+    queueWithoutSpotPin,
+    spotPinsQueue,
     mySpot,
     nowPlaying,
     // filter state
     hideWatched,
-    setHideWatched,
+    setHideWatched: setHideWatchedTracked,
     filterUserId,
-    setFilterUserId,
+    setFilterUserId: setFilterUserIdTracked,
     queueSort,
     setQueueSort,
     queueSortDir,
     setQueueSortDir,
     myWatchingId,
+    activeReactionBursts,
     // actions
     addVideo,
     playVideo,
@@ -323,6 +493,8 @@ export function usePartyRoom(code: string) {
     kickMember,
     leave,
     shareInvite,
+    clearMySpot,
+    completeReactionBurst,
     resolveMember: (memberId: string, video?: QueueItem) =>
       resolveMember(party, memberId, video),
   };

@@ -10,6 +10,7 @@ import {
   type ResolvedMember,
 } from "@reelparty/shared";
 import { Sheet } from "../../components/Sheet";
+import { SheetHeader } from "../../components/SheetHeader";
 import { ReactionChips } from "../../components/ReactionChips";
 
 export function ViewersSheet({
@@ -45,7 +46,7 @@ export function ViewersSheet({
 
   return (
     <Sheet open onClose={onClose}>
-      <View className="items-center">
+      <SheetHeader>
         <View className="flex-row items-center gap-1.5">
           <Icons.Eye size={20} color="#58cc02" />
           <Heading style={{ fontSize: 18 }}>Who watched</Heading>
@@ -53,7 +54,7 @@ export function ViewersSheet({
         <Muted numberOfLines={2} className="mt-1 text-center text-[13px]">
           {video.title}
         </Muted>
-      </View>
+      </SheetHeader>
 
       {reactionSummary(video.reactions).length > 0 ? (
         <View className="mt-3">

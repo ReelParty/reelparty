@@ -15,7 +15,7 @@ export function PartyHeader({
   onOpenNowPlaying: () => void;
 }) {
   return (
-    <View className="flex-row items-center justify-between">
+    <View className="mt-5 flex-row items-center justify-between">
       <Pressable
         onPress={onLeave}
         accessibilityLabel="Leave party"

@@ -6,7 +6,7 @@ import { cn } from "./cn";
 const pageBg = "#0a0a0f";
 
 const columnClass = (className?: string) =>
-  cn("mx-auto w-full max-w-[440px] flex-1 px-[18px] py-5", className);
+  cn("mx-auto w-full max-w-[440px] flex-1 px-[18px]", className);
 
 /** Flex column so `flex-1` spacers push bottom actions down. */
 const columnStyle: ViewStyle = { flex: 1, flexDirection: "column" };

@@ -191,37 +191,33 @@ export function PartyScreen({ code }: { code: string }) {
   return (
     <>
       <Screen>
-        <Pressable
-          style={{ flex: 1 }}
-          onPress={hasMySpot ? dismissSpotFromEmptyTap : undefined}
-        >
-        <PartyHeader
-          code={party.code}
-          onLeave={room.leave}
-          onInvite={room.shareInvite}
-          onOpenNowPlaying={() =>
-            room.nowPlaying
-              ? room.playVideo(room.nowPlaying)
-              : toast("Nothing playing in the party yet")
-          }
-        />
-
-        <MembersPill
-          members={room.sortedMembers.map((m) => ({ ...m, booted: false }))}
-          hostId={party.hostId}
-          isHost={room.isHost}
-          onKick={room.kickMember}
-        />
-
         <ScrollView
-          className="mt-4 flex-1"
+          className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 96 }}
+          contentContainerStyle={{ paddingBottom: 96 }}
         >
           <Pressable
             onPress={hasMySpot ? dismissSpotFromEmptyTap : undefined}
-            style={{ flexGrow: 1 }}
           >
+            <PartyHeader
+              code={party.code}
+              onLeave={room.leave}
+              onInvite={room.shareInvite}
+              onOpenNowPlaying={() =>
+                room.nowPlaying
+                  ? room.playVideo(room.nowPlaying)
+                  : toast("Nothing playing in the party yet")
+              }
+            />
+
+            <MembersPill
+              members={room.sortedMembers.map((m) => ({ ...m, booted: false }))}
+              hostId={party.hostId}
+              isHost={room.isHost}
+              onKick={room.kickMember}
+            />
+
+            <View className="mt-6">
           <View className="mb-2.5 flex-row items-start justify-between gap-2.5">
             <View style={{ gap: 1 }}>
               <Heading style={{ fontSize: 18, lineHeight: 19 }}>The Queue</Heading>
@@ -341,9 +337,9 @@ export function PartyScreen({ code }: { code: string }) {
               </View>
             </View>
           )}
+            </View>
           </Pressable>
         </ScrollView>
-        </Pressable>
 
         <View className="absolute bottom-6 right-5">
           <Button tone="green" loading={room.adding} onPress={openAddSheet}>

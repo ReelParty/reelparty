@@ -28,7 +28,9 @@ export function Button({
 }: ButtonProps) {
   const [pressed, setPressed] = useState(false);
   const p = PAL[tone];
-  const lip = pressed ? 2 : 5;
+  const lipMax = 5;
+  const pressDepth = 3;
+  const lip = pressed ? lipMax - pressDepth : lipMax;
   const inactive = disabled || loading;
 
   return (
@@ -40,7 +42,6 @@ export function Button({
       className={cn(full && "w-full", "self-start", full && "self-stretch")}
       style={{
         opacity: loading ? 1 : inactive ? 0.45 : 1,
-        transform: [{ translateY: pressed ? 3 : 0 }],
       }}
       {...rest}
     >
@@ -53,6 +54,8 @@ export function Button({
           backgroundColor: p.c,
           borderBottomWidth: lip,
           borderBottomColor: p.lip,
+          marginBottom: pressed ? pressDepth : 0,
+          transform: [{ translateY: pressed ? pressDepth : 0 }],
         }}
       >
         {typeof children === "string" ? (

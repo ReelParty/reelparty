@@ -5,7 +5,7 @@ import { View, type ViewStyle } from "react-native";
 
 const FOOTER_RESERVED = 72;
 /** iOS Safari often under-reports keyboard overlap via visualViewport. */
-const KEYBOARD_EXTRA_LIFT = 44;
+const KEYBOARD_EXTRA_LIFT = 60;
 
 /** Mobile web: pin the action above the on-screen keyboard via visualViewport. */
 export function KeyboardFloatingFooter({ children }: { children: ReactNode }) {
@@ -46,7 +46,7 @@ export function KeyboardFloatingFooter({ children }: { children: ReactNode }) {
     zIndex: 50,
     alignItems: "center",
     paddingHorizontal: 18,
-    paddingBottom: 20,
+    paddingBottom: 24,
   };
 
   return (

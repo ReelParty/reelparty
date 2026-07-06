@@ -18,7 +18,10 @@ import {
   type Reactions,
   type SortDir,
 } from "@reelparty/shared";
-import type { ReactionBurstPayload } from "../features/party/reactionBurstParticles";
+import {
+  REACTION_BURST_MS,
+  type ReactionBurstPayload,
+} from "../features/party/reactionBurstParticles";
 import { useApp, useToast } from "../provider";
 import { inviteUrl } from "../platform/bridge";
 import { useAppNavigation } from "../navigation/useAppNavigation";
@@ -50,8 +53,8 @@ export function usePartyRoom(code: string) {
   >({});
   const burstIdRef = useRef(0);
   const prevReactionsRef = useRef<Record<string, Record<string, string>>>({});
+  const recentBurstsRef = useRef<Record<string, number>>({});
   const reactionsInitRef = useRef(false);
-  const localReactionAtRef = useRef<Record<string, number>>({});
 
   // Hydrate persisted session + filters when the code changes.
   useEffect(() => {
@@ -82,6 +85,7 @@ export function usePartyRoom(code: string) {
   useEffect(() => {
     reactionsInitRef.current = false;
     prevReactionsRef.current = {};
+    recentBurstsRef.current = {};
     setActiveReactionBursts({});
   }, [code]);
 
@@ -101,6 +105,11 @@ export function usePartyRoom(code: string) {
       member: { id: string; name: string; color: string; avatarFace?: number },
     ) => {
       if (!emoji || !member.name) return;
+      const dedupKey = `${videoId}:${member.id}:${emoji}`;
+      const now = Date.now();
+      if (now - (recentBurstsRef.current[dedupKey] ?? 0) < REACTION_BURST_MS) return;
+      recentBurstsRef.current[dedupKey] = now;
+
       setActiveReactionBursts((active) => ({
         ...active,
         [videoId]: {
@@ -141,13 +150,6 @@ export function usePartyRoom(code: string) {
       const curr = v.reactions || {};
       Object.entries(curr).forEach(([userId, emoji]) => {
         if (prev[userId] === emoji) return;
-        const key = `${v.id}:${userId}`;
-        if (
-          userId === me &&
-          Date.now() - (localReactionAtRef.current[key] || 0) < 500
-        ) {
-          return;
-        }
         const member = resolveMember(party, userId, v);
         spawnReactionBurst(v.id, emoji, member);
       });
@@ -299,7 +301,6 @@ export function usePartyRoom(code: string) {
       else next[me] = reaction;
 
       if (!removing) {
-        localReactionAtRef.current[`${video.id}:${me}`] = Date.now();
         syncPrevReaction(video.id, me, reaction);
         const member = party?.members.find((m) => m.id === me);
         if (member) spawnReactionBurst(video.id, reaction, member);

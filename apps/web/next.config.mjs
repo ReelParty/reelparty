@@ -9,6 +9,14 @@ const monorepoRoot = path.join(
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
+  // Allow ngrok / other HTTPS tunnels to load dev assets and HMR in development.
+  allowedDevOrigins: [
+    "*.ngrok-free.dev",
+    "*.ngrok-free.app",
+    "*.ngrok.io",
+    "*.ngrok.app",
+  ],
   transpilePackages: [
     // React Native ecosystem (must be transpiled for the browser).
     "react-native",

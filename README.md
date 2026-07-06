@@ -104,6 +104,44 @@ pnpm dev:web
 EXPO_PUBLIC_API_URL="http://192.168.1.20:3000" pnpm dev:mobile
 ```
 
+### ngrok (share outside your LAN)
+
+The web app serves both the UI and tRPC API on port **3000**. ngrok tunnels that
+single port.
+
+**One-time setup** (authtoken is stored in `~/.config/ngrok/`, not in this repo):
+
+```bash
+ngrok config add-authtoken YOUR_TOKEN
+pnpm install   # pulls in concurrently for dev:tunnel
+```
+
+**Run web + tunnel together:**
+
+```bash
+pnpm dev:tunnel
+```
+
+Or in separate terminals: `pnpm dev:web` then `pnpm tunnel`.
+
+Open the `https://….ngrok-free.dev` URL ngrok prints. `allowedDevOrigins` in
+`apps/web/next.config.mjs` allows the tunnel host in Next.js dev mode.
+
+**Mobile pointed at the tunnel** (replace with your ngrok URL):
+
+```bash
+EXPO_PUBLIC_API_URL="https://YOUR-SUBDOMAIN.ngrok-free.dev" \
+EXPO_PUBLIC_WEB_ORIGIN="https://YOUR-SUBDOMAIN.ngrok-free.dev" \
+pnpm dev:mobile
+```
+
+Optional for invite/OG links when sharing from the tunneled web app, set in
+`apps/web/.env.local`:
+
+```
+NEXT_PUBLIC_WEB_ORIGIN=https://YOUR-SUBDOMAIN.ngrok-free.dev
+```
+
 ## Quality scripts
 
 ```bash

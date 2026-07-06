@@ -11,6 +11,8 @@
     "dev:web": "pnpm --filter @reelparty/web dev",
     "dev:mobile": "pnpm --filter @reelparty/mobile dev",
     "dev:api": "pnpm --filter @reelparty/web dev",
+    "dev:tunnel": "concurrently -n web,tunnel -c green,magenta \"pnpm dev:web\" \"ngrok http 127.0.0.1:3000\"",
+    "tunnel": "ngrok http 127.0.0.1:3000",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
+    "concurrently": "^9.1.2",
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"

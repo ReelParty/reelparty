@@ -10,6 +10,7 @@ import { useAppNavigation } from "../../navigation/useAppNavigation";
 import { useToast } from "../../provider";
 import { BackBar } from "../../components/BackBar";
 import { Input } from "../../components/Input";
+import { KeyboardFloatingFooter } from "../../components/KeyboardFloatingFooter";
 
 export function CreateScreen() {
   const me = useUserId();
@@ -62,15 +63,16 @@ export function CreateScreen() {
         returnKeyType="go"
         onSubmitEditing={create}
       />
-      <View className="flex-1" />
-      <Button
-        tone="green"
-        full
-        disabled={!name.trim() || busy}
-        onPress={create}
-      >
-        <ButtonText>LET&apos;S GO 🚀</ButtonText>
-      </Button>
+      <KeyboardFloatingFooter>
+        <Button
+          tone="green"
+          full
+          disabled={!name.trim() || busy}
+          onPress={create}
+        >
+          <ButtonText>LET&apos;S GO 🚀</ButtonText>
+        </Button>
+      </KeyboardFloatingFooter>
     </Screen>
   );
 }

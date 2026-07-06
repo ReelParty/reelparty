@@ -7,6 +7,7 @@ import { Button, ButtonText, Heading, Muted, Screen, Text } from "@reelparty/ui"
 import { useAppNavigation } from "../../navigation/useAppNavigation";
 import { BackBar } from "../../components/BackBar";
 import { CodeInput } from "../../components/Input";
+import { KeyboardFloatingFooter } from "../../components/KeyboardFloatingFooter";
 
 export function JoinScreen() {
   const nav = useAppNavigation();
@@ -63,15 +64,16 @@ export function JoinScreen() {
           {err}
         </Text>
       ) : null}
-      <View className="flex-1" />
-      <Button
-        tone="blue"
-        full
-        disabled={code.length !== 5 || busy}
-        onPress={cont}
-      >
-        <ButtonText>CONTINUE</ButtonText>
-      </Button>
+      <KeyboardFloatingFooter>
+        <Button
+          tone="blue"
+          full
+          disabled={code.length !== 5 || busy}
+          onPress={cont}
+        >
+          <ButtonText>CONTINUE</ButtonText>
+        </Button>
+      </KeyboardFloatingFooter>
     </Screen>
   );
 }

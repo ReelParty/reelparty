@@ -9,6 +9,7 @@ import { useAppNavigation } from "../../navigation/useAppNavigation";
 import { useToast } from "../../provider";
 import { BackBar } from "../../components/BackBar";
 import { Input } from "../../components/Input";
+import { KeyboardFloatingFooter } from "../../components/KeyboardFloatingFooter";
 
 export function JoinNameScreen({ code }: { code: string }) {
   const me = useUserId();
@@ -51,10 +52,11 @@ export function JoinNameScreen({ code }: { code: string }) {
         returnKeyType="go"
         onSubmitEditing={join}
       />
-      <View className="flex-1" />
-      <Button tone="green" full disabled={!name.trim() || busy} onPress={join}>
-        <ButtonText>JOIN PARTY 🎉</ButtonText>
-      </Button>
+      <KeyboardFloatingFooter>
+        <Button tone="green" full disabled={!name.trim() || busy} onPress={join}>
+          <ButtonText>JOIN PARTY 🎉</ButtonText>
+        </Button>
+      </KeyboardFloatingFooter>
     </Screen>
   );
 }

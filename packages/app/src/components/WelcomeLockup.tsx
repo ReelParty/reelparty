@@ -3,14 +3,15 @@
 import { View } from "react-native";
 import { Heading, Muted, PlatformLogo, Text } from "@reelparty/ui";
 import { PLATFORM_COLOR, PLATFORM_LABEL, type Platform } from "@reelparty/shared";
+import { BrandLogo } from "./BrandLogo";
 
 const PLATFORMS: Platform[] = ["tiktok", "youtube", "instagram", "facebook"];
 
 export function WelcomeLockup() {
   return (
     <View className="items-center">
-      <View className="mb-4 h-[104px] w-[104px] items-center justify-center rounded-[28px] border-2 border-border bg-surface2">
-        <Text style={{ fontSize: 48 }}>🥳</Text>
+      <View className="mb-4">
+        <BrandLogo size={112} />
       </View>
       <View className="flex-row items-baseline">
         <Heading style={{ fontSize: 48, color: "#ececf1" }}>Reel</Heading>

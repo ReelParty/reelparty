@@ -6,5 +6,5 @@
     "noEmit": true,
     "types": ["react", "nativewind"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "nativewind-env.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "nativewind-env.d.ts", "assets.d.ts"]
 }

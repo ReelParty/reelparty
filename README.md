@@ -48,8 +48,8 @@ Platform differences are injected at the root via an `AppProvider` that takes a
 ## Prerequisites
 
 - Node 20+ and `pnpm` 9 (`corepack enable`)
-- PostgreSQL (default `postgres://127.0.0.1:5432/reelparty`; the schema is
-  applied automatically on first run)
+- PostgreSQL for local dev (default `postgres://127.0.0.1:5432/reelparty`; the
+  schema is applied automatically on first run — no migration step)
 - For mobile: [Expo Go](https://expo.dev/go) or an iOS Simulator / Android Emulator
 
 ## Install
@@ -62,7 +62,7 @@ pnpm install
 
 | Variable                | Used by | Purpose                                                |
 | ----------------------- | ------- | ------------------------------------------------------ |
-| `DATABASE_URL`          | web     | Postgres connection string (default local)             |
+| `DATABASE_URL`          | web     | Postgres connection string (default local; Neon in prod) |
 | `NEXT_PUBLIC_API_URL`   | web     | tRPC origin; empty = same origin (`/api/trpc`)         |
 | `NEXT_PUBLIC_WEB_ORIGIN`| web     | Absolute origin for OG/invite metadata                 |
 | `EXPO_PUBLIC_API_URL`   | mobile  | tRPC origin (the running web app), e.g. `http://IP:3000` |
@@ -153,11 +153,46 @@ pnpm build       # turbo build (currently the Next.js web app)
 
 ## Deployment
 
-- **Web → Vercel:** set the project root to `apps/web`. Vercel detects Next.js;
-  set `DATABASE_URL` and `NEXT_PUBLIC_WEB_ORIGIN`.
-- **Mobile → Expo EAS:** from `apps/mobile`, run `eas build` (configure your EAS
-  project first) and set `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WEB_ORIGIN` to your
-  deployed web origin.
+Production runs on **Vercel** (web app + API) and **Neon** (serverless
+Postgres), both on free tiers: <https://reelparty.vercel.app>
+
+### Web + API → Vercel
+
+- Project root is `apps/web`; Vercel detects Next.js and the pnpm monorepo
+  automatically. Every push to `main` deploys production; other branches get
+  preview URLs.
+- Environment variables:
+  - `DATABASE_URL` — the **pooled** Neon connection string (hostname contains
+    `-pooler`, so PgBouncer multiplexes the many serverless instances). It must
+    start with exactly `postgresql://` — a stray quote or invisible character
+    from copy-paste makes `pg` silently connect to a placeholder host named
+    `base`; the server now refuses to start with a clear error instead.
+  - `NEXT_PUBLIC_WEB_ORIGIN` — the deployed origin (baked in at build time, so
+    changing it requires a redeploy).
+- No schema/migration step: `packages/api/src/server/db.ts` applies the schema
+  idempotently on first connection.
+
+### Database → Neon
+
+- Free tier autosuspends after ~5 min idle; the next request pays a ~1s
+  cold start. Fine for a party app.
+- Pick a region close to Vercel's function region (default `iad1`).
+
+### Mobile → Expo EAS
+
+From `apps/mobile`, run `eas build` (configure your EAS project first) with the
+production origin in the profile's `env`:
+
+```json
+"env": {
+  "EXPO_PUBLIC_API_URL": "https://reelparty.vercel.app",
+  "EXPO_PUBLIC_WEB_ORIGIN": "https://reelparty.vercel.app"
+}
+```
+
+For local development against production, put the same two values in
+`apps/mobile/.env`. `EXPO_PUBLIC_*` vars are inlined at bundle time — restart
+Expo with `--clear` after changing them.
 
 ## Working in the monorepo
 

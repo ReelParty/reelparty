@@ -11,7 +11,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.reelparty.app"
+      "bundleIdentifier": "com.reelparty.app",
+      "appleTeamId": "4FM6U54YA4"
     },
     "android": {
       "package": "com.reelparty.app",
@@ -27,7 +28,10 @@
       "output": "single",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-font"],
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
     "experiments": {
       "typedRoutes": true
     }

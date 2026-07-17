@@ -1,43 +1,79 @@
-import { MongoClient, type Db } from "mongodb";
+import { Pool } from "pg";
 
-const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
-const dbName = process.env.MONGODB_DB || "reelparty";
+const connectionString =
+  process.env.DATABASE_URL || "postgres://127.0.0.1:5432/reelparty";
 
 /**
- * Lazily-created, cached Mongo connection. Caching on globalThis avoids
- * exhausting connections during Next.js dev hot-reloads / serverless reuse.
+ * Lazily-created, cached pg pool. Caching on globalThis avoids exhausting
+ * connections during Next.js dev hot-reloads / serverless reuse.
  */
-const globalForMongo = globalThis as unknown as {
-  _reelpartyMongo?: Promise<Db>;
+const globalForPg = globalThis as unknown as {
+  _reelpartyPg?: Promise<Pool>;
 };
 
-async function connect(): Promise<Db> {
-  const client = new MongoClient(uri);
-  await client.connect();
-  const db = client.db(dbName);
+/**
+ * Applied idempotently on first connect so local dev and fresh deploys need
+ * no manual migration step. Keep in sync with /schema.sql (the canonical
+ * copy); it is inlined here because the repo-root file is not available in
+ * serverless bundles.
+ */
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS parties (
+  code            TEXT PRIMARY KEY,
+  host_id         TEXT NOT NULL,
+  host_name       TEXT NOT NULL,
+  now_playing_id  TEXT,
+  created_at      TEXT NOT NULL
+);
 
-  try {
-    await db.collection("members").dropIndex("id_1");
-  } catch {
-    // index may not exist on fresh databases
-  }
+CREATE TABLE IF NOT EXISTS members (
+  id          TEXT NOT NULL,
+  party_code  TEXT NOT NULL REFERENCES parties(code) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  color       TEXT NOT NULL,
+  avatar_face INTEGER,
+  joined_at   TEXT NOT NULL,
+  PRIMARY KEY (id, party_code)
+);
 
-  await Promise.all([
-    db.collection("parties").createIndex({ code: 1 }, { unique: true }),
-    db
-      .collection("members")
-      .createIndex({ id: 1, party_code: 1 }, { unique: true }),
-    db.collection("members").createIndex({ party_code: 1, joined_at: 1 }),
-    db.collection("queue_items").createIndex({ id: 1 }, { unique: true }),
-    db.collection("queue_items").createIndex({ party_code: 1, position: 1 }),
-  ]);
+CREATE INDEX IF NOT EXISTS members_party_joined_idx
+  ON members (party_code, joined_at);
 
-  return db;
+CREATE TABLE IF NOT EXISTS queue_items (
+  id            TEXT PRIMARY KEY,
+  party_code    TEXT NOT NULL REFERENCES parties(code) ON DELETE CASCADE,
+  url           TEXT NOT NULL,
+  platform      TEXT NOT NULL,
+  video_id      TEXT,
+  title         TEXT NOT NULL,
+  creator       TEXT,
+  thumbnail     TEXT,
+  added_by_id   TEXT NOT NULL,
+  added_by_name TEXT NOT NULL,
+  watched_by    TEXT[] NOT NULL DEFAULT '{}',
+  reactions     JSONB NOT NULL DEFAULT '{}',
+  position      INTEGER NOT NULL,
+  created_at    TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS queue_items_party_position_idx
+  ON queue_items (party_code, position);
+`;
+
+async function connect(): Promise<Pool> {
+  const pool = new Pool({
+    connectionString,
+    // Keep the per-instance footprint small; serverless platforms run many
+    // concurrent instances against one database.
+    max: 5,
+  });
+  await pool.query(SCHEMA);
+  return pool;
 }
 
-export function getDb(): Promise<Db> {
-  if (!globalForMongo._reelpartyMongo) {
-    globalForMongo._reelpartyMongo = connect();
+export function getDb(): Promise<Pool> {
+  if (!globalForPg._reelpartyPg) {
+    globalForPg._reelpartyPg = connect();
   }
-  return globalForMongo._reelpartyMongo;
+  return globalForPg._reelpartyPg;
 }

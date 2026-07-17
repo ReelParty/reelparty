@@ -1,7 +1,7 @@
 import { avatarIndexFor } from "@reelparty/shared";
 import type { Member, Party, Platform, QueueItem } from "@reelparty/shared";
 
-/** Raw Mongo document shapes (snake_case as stored). */
+/** Raw Postgres row shapes (snake_case as stored). */
 export interface PartyRow {
   code: string;
   host_id: string;
@@ -13,8 +13,8 @@ export interface MemberRow {
   id: string;
   name: string;
   color: string;
-  avatar_face?: number;
-  joined_at?: string;
+  avatar_face: number | null;
+  joined_at: string;
 }
 
 export interface QueueRow {
@@ -23,13 +23,13 @@ export interface QueueRow {
   platform: Platform;
   video_id: string | null;
   title: string;
-  creator?: string;
-  thumbnail?: string;
+  creator: string | null;
+  thumbnail: string | null;
   added_by_id: string;
   added_by_name: string;
-  created_at?: string;
-  watched_by?: string[];
-  reactions?: Record<string, string>;
+  created_at: string;
+  watched_by: string[];
+  reactions: Record<string, string>;
 }
 
 export const mapParty = (r: PartyRow | null): Party | null =>

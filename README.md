@@ -15,7 +15,7 @@ reelparty/
 │  └─ mobile/   Expo + Expo Router + React Native + NativeWind
 ├─ packages/
 │  ├─ shared/   Types, Zod schemas, pure business logic, storage interface
-│  ├─ api/      tRPC router + MongoDB layer (server) and tRPC client (client)
+│  ├─ api/      tRPC router + Postgres layer (server) and tRPC client (client)
 │  ├─ ui/       Cross-platform NativeWind components (Button, Card, Avatar, …)
 │  ├─ app/      Shared screens, providers, Solito navigation, platform bridges
 │  └─ config/   Shared ESLint flat config + Tailwind/NativeWind design preset
@@ -41,14 +41,15 @@ Platform differences are injected at the root via an `AppProvider` that takes a
 - **Web:** Next.js 15 App Router, React Server Components, react-native-web
 - **Mobile:** Expo SDK 56, Expo Router, React Native (New Architecture)
 - **Styling:** NativeWind v4 (Tailwind) with a shared design preset
-- **API:** tRPC v11 + MongoDB, end-to-end typed; TanStack Query for data
+- **API:** tRPC v11 + PostgreSQL, end-to-end typed; TanStack Query for data
 - **Navigation:** Solito (one route map for both platforms)
 - **Quality:** TypeScript (strict), ESLint (flat), Prettier, Conventional Commits
 
 ## Prerequisites
 
 - Node 20+ and `pnpm` 9 (`corepack enable`)
-- MongoDB (default `mongodb://127.0.0.1:27017`)
+- PostgreSQL (default `postgres://127.0.0.1:5432/reelparty`; the schema is
+  applied automatically on first run)
 - For mobile: [Expo Go](https://expo.dev/go) or an iOS Simulator / Android Emulator
 
 ## Install
@@ -61,8 +62,7 @@ pnpm install
 
 | Variable                | Used by | Purpose                                                |
 | ----------------------- | ------- | ------------------------------------------------------ |
-| `MONGODB_URI`           | web     | Mongo connection string (default local)                |
-| `MONGODB_DB`            | web     | Database name (default `reelparty`)                    |
+| `DATABASE_URL`          | web     | Postgres connection string (default local)             |
 | `NEXT_PUBLIC_API_URL`   | web     | tRPC origin; empty = same origin (`/api/trpc`)         |
 | `NEXT_PUBLIC_WEB_ORIGIN`| web     | Absolute origin for OG/invite metadata                 |
 | `EXPO_PUBLIC_API_URL`   | mobile  | tRPC origin (the running web app), e.g. `http://IP:3000` |
@@ -154,7 +154,7 @@ pnpm build       # turbo build (currently the Next.js web app)
 ## Deployment
 
 - **Web → Vercel:** set the project root to `apps/web`. Vercel detects Next.js;
-  set `MONGODB_URI`, `MONGODB_DB`, and `NEXT_PUBLIC_WEB_ORIGIN`.
+  set `DATABASE_URL` and `NEXT_PUBLIC_WEB_ORIGIN`.
 - **Mobile → Expo EAS:** from `apps/mobile`, run `eas build` (configure your EAS
   project first) and set `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WEB_ORIGIN` to your
   deployed web origin.
@@ -202,7 +202,7 @@ platform file or the `PlatformBridge`.
 
 ## Notes
 
-- Web and mobile share one tRPC API and one MongoDB database.
+- Web and mobile share one tRPC API and one Postgres database.
 - Clipboard auto-read works on localhost/HTTPS; over a plain LAN IP browsers
   block it, so guests use the paste sheet.
 - YouTube Shorts fetch real metadata and play embedded. TikTok/Reels/Facebook show

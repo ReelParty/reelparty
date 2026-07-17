@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import type { UpdateFilter } from "mongodb";
 import { avatarColorFor, avatarIndexFor, isValidReaction } from "@reelparty/shared";
 import type {
   AddVideoInput,
@@ -27,27 +26,33 @@ const nowIso = () => new Date().toISOString();
 
 export async function getParty(code: string) {
   const db = await getDb();
-  const row = await db.collection<PartyRow>("parties").findOne({ code });
-  return mapParty(row);
+  const { rows } = await db.query<PartyRow>(
+    `SELECT code, host_id, host_name, now_playing_id FROM parties WHERE code = $1`,
+    [code],
+  );
+  return mapParty(rows[0] ?? null);
 }
 
 export async function getMembers(code: string): Promise<Member[]> {
   const db = await getDb();
-  const rows = await db
-    .collection<MemberRow>("members")
-    .find({ party_code: code })
-    .sort({ joined_at: 1 })
-    .toArray();
+  const { rows } = await db.query<MemberRow>(
+    `SELECT id, name, color, avatar_face, joined_at
+       FROM members WHERE party_code = $1
+      ORDER BY joined_at ASC`,
+    [code],
+  );
   return rows.map(mapMember);
 }
 
 export async function getQueue(code: string): Promise<QueueItem[]> {
   const db = await getDb();
-  const rows = await db
-    .collection<QueueRow>("queue_items")
-    .find({ party_code: code })
-    .sort({ created_at: 1, position: 1 })
-    .toArray();
+  const { rows } = await db.query<QueueRow>(
+    `SELECT id, url, platform, video_id, title, creator, thumbnail,
+            added_by_id, added_by_name, created_at, watched_by, reactions
+       FROM queue_items WHERE party_code = $1
+      ORDER BY created_at ASC, position ASC`,
+    [code],
+  );
   return rows.map(mapVideo);
 }
 
@@ -64,140 +69,150 @@ export async function getPartyView(code: string): Promise<PartyView | null> {
 
 export async function getMemberCount(code: string): Promise<number> {
   const db = await getDb();
-  return db.collection("members").countDocuments({ party_code: code });
+  const { rows } = await db.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM members WHERE party_code = $1`,
+    [code],
+  );
+  return Number(rows[0]?.count ?? 0);
 }
+
+const upsertMemberSql = `
+  INSERT INTO members (id, party_code, name, color, avatar_face, joined_at)
+  VALUES ($1, $2, $3, $4, $5, $6)
+  ON CONFLICT (id, party_code) DO UPDATE
+    SET name = EXCLUDED.name,
+        color = EXCLUDED.color,
+        avatar_face = EXCLUDED.avatar_face
+`;
 
 export async function createParty(input: CreatePartyInput): Promise<void> {
   const db = await getDb();
   const now = nowIso();
-  await db.collection("parties").insertOne({
-    code: input.code,
-    host_id: input.hostId,
-    host_name: input.hostName,
-    now_playing_id: null,
-    created_at: now,
-  });
-  await db.collection("members").updateOne(
-    { id: input.hostId, party_code: input.code },
-    {
-      $set: {
-        id: input.hostId,
-        party_code: input.code,
-        name: input.hostName,
-        color: avatarColorFor(input.hostId),
-        avatar_face: avatarIndexFor(input.hostId),
-      },
-      $setOnInsert: { joined_at: now },
-    },
-    { upsert: true },
+  await db.query(
+    `INSERT INTO parties (code, host_id, host_name, now_playing_id, created_at)
+     VALUES ($1, $2, $3, NULL, $4)`,
+    [input.code, input.hostId, input.hostName, now],
   );
+  await db.query(upsertMemberSql, [
+    input.hostId,
+    input.code,
+    input.hostName,
+    avatarColorFor(input.hostId),
+    avatarIndexFor(input.hostId),
+    now,
+  ]);
 }
 
 export async function joinParty(input: JoinPartyInput): Promise<void> {
   const db = await getDb();
-  await db.collection("members").updateOne(
-    { id: input.id, party_code: input.code },
-    {
-      $set: {
-        id: input.id,
-        party_code: input.code,
-        name: input.name,
-        color: avatarColorFor(input.id),
-        avatar_face: avatarIndexFor(input.id),
-      },
-      $setOnInsert: { joined_at: nowIso() },
-    },
-    { upsert: true },
-  );
+  await db.query(upsertMemberSql, [
+    input.id,
+    input.code,
+    input.name,
+    avatarColorFor(input.id),
+    avatarIndexFor(input.id),
+    nowIso(),
+  ]);
 }
 
 export async function removeMember(input: RemoveMemberInput): Promise<void> {
   const db = await getDb();
-  const party = await db
-    .collection<PartyRow>("parties")
-    .findOne({ code: input.code });
+  const { rows } = await db.query<PartyRow>(
+    `SELECT code, host_id, host_name, now_playing_id FROM parties WHERE code = $1`,
+    [input.code],
+  );
+  const party = rows[0];
   if (!party) throw new TRPCError({ code: "NOT_FOUND", message: "Party not found" });
   if (party.host_id !== input.hostId)
     throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
   if (input.memberId === party.host_id)
     throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot remove host" });
 
-  const result = await db
-    .collection("members")
-    .deleteOne({ id: input.memberId, party_code: input.code });
-  if (result.deletedCount === 0)
+  const result = await db.query(
+    `DELETE FROM members WHERE id = $1 AND party_code = $2`,
+    [input.memberId, input.code],
+  );
+  if (result.rowCount === 0)
     throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
 }
 
 export async function addVideo(input: AddVideoInput): Promise<void> {
   const db = await getDb();
-  await db.collection("queue_items").insertOne({
-    id: input.id,
-    party_code: input.partyCode,
-    url: input.url,
-    platform: input.platform,
-    video_id: input.videoId,
-    title: input.title,
-    creator: input.creator,
-    thumbnail: input.thumbnail,
-    added_by_id: input.addedById,
-    added_by_name: input.addedByName,
-    watched_by: input.addedById ? [input.addedById] : [],
-    reactions: {},
-    position: input.position,
-    created_at: nowIso(),
-  });
+  await db.query(
+    `INSERT INTO queue_items
+       (id, party_code, url, platform, video_id, title, creator, thumbnail,
+        added_by_id, added_by_name, watched_by, reactions, position, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, '{}'::jsonb, $12, $13)`,
+    [
+      input.id,
+      input.partyCode,
+      input.url,
+      input.platform,
+      input.videoId,
+      input.title,
+      input.creator,
+      input.thumbnail,
+      input.addedById,
+      input.addedByName,
+      input.addedById ? [input.addedById] : [],
+      input.position,
+      nowIso(),
+    ],
+  );
 }
 
 export async function removeVideo(input: VideoActionInput): Promise<void> {
   const db = await getDb();
-  const item = await db
-    .collection<QueueRow>("queue_items")
-    .findOne({ id: input.videoId, party_code: input.partyCode });
+  const item = await findQueueItem(input.videoId, input.partyCode);
   if (!item)
     throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
-  const party = await db
-    .collection<PartyRow>("parties")
-    .findOne({ code: input.partyCode });
+  const { rows } = await db.query<PartyRow>(
+    `SELECT code, host_id, host_name, now_playing_id FROM parties WHERE code = $1`,
+    [input.partyCode],
+  );
+  const party = rows[0];
   if (!party)
     throw new TRPCError({ code: "NOT_FOUND", message: "Party not found" });
   if (item.added_by_id !== input.userId && party.host_id !== input.userId)
     throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
 
-  await db.collection("queue_items").deleteOne({ id: input.videoId });
+  await db.query(`DELETE FROM queue_items WHERE id = $1`, [input.videoId]);
   if (party.now_playing_id === input.videoId) {
-    await db
-      .collection("parties")
-      .updateOne({ code: input.partyCode }, { $set: { now_playing_id: null } });
+    await db.query(
+      `UPDATE parties SET now_playing_id = NULL WHERE code = $1`,
+      [input.partyCode],
+    );
   }
 }
 
 export async function playVideo(input: PlayVideoInput): Promise<void> {
   const db = await getDb();
   await Promise.all([
-    db
-      .collection("parties")
-      .updateOne({ code: input.code }, { $set: { now_playing_id: input.videoId } }),
-    db
-      .collection("queue_items")
-      .updateOne({ id: input.videoId }, { $addToSet: { watched_by: input.userId } }),
+    db.query(`UPDATE parties SET now_playing_id = $2 WHERE code = $1`, [
+      input.code,
+      input.videoId,
+    ]),
+    db.query(
+      `UPDATE queue_items
+          SET watched_by = array_append(watched_by, $2)
+        WHERE id = $1 AND NOT ($2 = ANY(watched_by))`,
+      [input.videoId, input.userId],
+    ),
   ]);
 }
 
 export async function unwatchVideo(input: VideoActionInput): Promise<void> {
   const db = await getDb();
-  const item = await db
-    .collection<QueueRow>("queue_items")
-    .findOne({ id: input.videoId, party_code: input.partyCode });
+  const item = await findQueueItem(input.videoId, input.partyCode);
   if (!item)
     throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
 
-  await db.collection<QueueRow>("queue_items").updateOne(
-    { id: input.videoId },
-    {
-      $pull: { watched_by: input.userId },
-      $unset: { [`reactions.${input.userId}`]: "" },
-    } as UpdateFilter<QueueRow>,
+  await db.query(
+    `UPDATE queue_items
+        SET watched_by = array_remove(watched_by, $2),
+            reactions = reactions - $2
+      WHERE id = $1`,
+    [input.videoId, input.userId],
   );
 }
 
@@ -205,22 +220,37 @@ export async function reactToVideo(input: ReactInput): Promise<void> {
   if (!isValidReaction(input.reaction))
     throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid reaction" });
   const db = await getDb();
-  const item = await db
-    .collection<QueueRow>("queue_items")
-    .findOne({ id: input.videoId, party_code: input.partyCode });
+  const item = await findQueueItem(input.videoId, input.partyCode);
   if (!item)
     throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
 
-  const field = `reactions.${input.userId}`;
   if (item.reactions?.[input.userId] === input.reaction) {
-    await db
-      .collection("queue_items")
-      .updateOne({ id: input.videoId }, { $unset: { [field]: "" } });
+    await db.query(
+      `UPDATE queue_items SET reactions = reactions - $2 WHERE id = $1`,
+      [input.videoId, input.userId],
+    );
   } else {
-    await db
-      .collection("queue_items")
-      .updateOne({ id: input.videoId }, { $set: { [field]: input.reaction } });
+    await db.query(
+      `UPDATE queue_items
+          SET reactions = reactions || jsonb_build_object($2::text, $3::text)
+        WHERE id = $1`,
+      [input.videoId, input.userId, input.reaction],
+    );
   }
+}
+
+async function findQueueItem(
+  videoId: string,
+  partyCode: string,
+): Promise<QueueRow | null> {
+  const db = await getDb();
+  const { rows } = await db.query<QueueRow>(
+    `SELECT id, url, platform, video_id, title, creator, thumbnail,
+            added_by_id, added_by_name, created_at, watched_by, reactions
+       FROM queue_items WHERE id = $1 AND party_code = $2`,
+    [videoId, partyCode],
+  );
+  return rows[0] ?? null;
 }
 
 /** Context used by the SEO invite page + OG image. */

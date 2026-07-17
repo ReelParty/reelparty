@@ -3,8 +3,7 @@
   "ui": "tui",
   "globalEnv": [
     "NODE_ENV",
-    "MONGODB_URI",
-    "MONGODB_DB",
+    "DATABASE_URL",
     "NEXT_PUBLIC_API_URL",
     "NEXT_PUBLIC_WEB_ORIGIN",
     "EXPO_PUBLIC_API_URL",

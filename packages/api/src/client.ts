@@ -8,7 +8,7 @@ import type {
   inferRouterInputs,
   inferRouterOutputs,
 } from "@trpc/server";
-// Type-only import: erased at build time, so the Mongo/server code never
+// Type-only import: erased at build time, so the Postgres/server code never
 // leaks into web or native client bundles.
 import type { AppRouter } from "./server/router";
 

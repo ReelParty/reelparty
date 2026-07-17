@@ -3,6 +3,15 @@ import { Pool } from "pg";
 const connectionString =
   process.env.DATABASE_URL || "postgres://127.0.0.1:5432/reelparty";
 
+// pg silently mis-parses strings that don't start with the scheme (e.g. a
+// pasted value with a stray quote or invisible character) and connects to a
+// placeholder host named "base". Fail loudly instead.
+if (!/^postgres(ql)?:\/\//.test(connectionString)) {
+  throw new Error(
+    `DATABASE_URL must start with postgres:// or postgresql://; got a value starting with ${JSON.stringify(connectionString.slice(0, 12))}`,
+  );
+}
+
 /**
  * Lazily-created, cached pg pool. Caching on globalThis avoids exhausting
  * connections during Next.js dev hot-reloads / serverless reuse.

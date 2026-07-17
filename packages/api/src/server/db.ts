@@ -73,7 +73,12 @@ async function connect(): Promise<Pool> {
 
 export function getDb(): Promise<Pool> {
   if (!globalForPg._reelpartyPg) {
-    globalForPg._reelpartyPg = connect();
+    globalForPg._reelpartyPg = connect().catch((err) => {
+      // Don't cache failures, or one transient error (e.g. the database
+      // waking from autosuspend) would wedge this instance permanently.
+      globalForPg._reelpartyPg = undefined;
+      throw err;
+    });
   }
   return globalForPg._reelpartyPg;
 }

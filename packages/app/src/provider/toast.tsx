@@ -7,9 +7,13 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Animated, View, type ViewStyle } from "react-native";
+import {
+  Animated,
+  View,
+  type PointerEvent as RNPointerEvent,
+  type ViewStyle,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ToastBubbleContent } from "./toast-bubble";
 import { ToastCtx, type ToastController } from "./toast-context";
@@ -264,7 +268,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => detachDragListeners(), [detachDragListeners]);
 
   const onToastPointerDown = useCallback(
-    (e: ReactPointerEvent<View>) => {
+    (e: RNPointerEvent) => {
+      // On web (react-native-web) the target is a real DOM element.
       const captureEl = e.currentTarget as unknown as HTMLElement;
       dragRef.current = {
         pointerId: e.nativeEvent.pointerId,
@@ -280,14 +285,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   const onToastPointerUp = useCallback(
-    (e: ReactPointerEvent<View>) => {
-      dragListenersRef.current?.up(e.nativeEvent);
+    (e: RNPointerEvent) => {
+      // On web the native event is a real DOM PointerEvent.
+      dragListenersRef.current?.up(e.nativeEvent as unknown as PointerEvent);
     },
     [],
   );
 
   const onToastPointerCancel = useCallback(
-    (e: ReactPointerEvent<View>) => {
+    (e: RNPointerEvent) => {
       const d = dragRef.current;
       if (!d || d.pointerId !== e.nativeEvent.pointerId) return;
       detachDragListeners();
@@ -303,13 +309,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [detachDragListeners, dragY, releaseDragCapture],
   );
 
-  const overlayStyle: ViewStyle = {
+  // react-native-web supports CSS position "fixed", but the RN style types
+  // only allow "absolute" | "relative" | "static".
+  const overlayStyle = {
     position: "fixed",
     top: insets.top + 16,
     left: 0,
     right: 0,
     zIndex: 9999,
-  };
+  } as unknown as ViewStyle;
 
   const controller = useMemo<ToastController>(
     () => ({ show, dismiss: dismissNow }),

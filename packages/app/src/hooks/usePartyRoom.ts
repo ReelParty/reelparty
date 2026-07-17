@@ -56,6 +56,18 @@ export function usePartyRoom(code: string) {
   const recentBurstsRef = useRef<Record<string, number>>({});
   const reactionsInitRef = useRef(false);
 
+  // Persist the active party as soon as we're confirmed a member, so the
+  // welcome-screen resume and the share-sheet "add to current party" flow
+  // know about it even before any video is played.
+  const savedSessionCodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!code || !me || !party) return;
+    if (savedSessionCodeRef.current === code) return;
+    if (!party.members.some((m) => m.id === me)) return;
+    savedSessionCodeRef.current = code;
+    void session.saveSession(code);
+  }, [code, me, party, session]);
+
   // Hydrate persisted session + filters when the code changes.
   useEffect(() => {
     if (!code) return;

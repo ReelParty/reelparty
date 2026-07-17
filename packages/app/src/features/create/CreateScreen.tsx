@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { trpc } from "@reelparty/api";
 import { code5 } from "@reelparty/shared";
 import { Button, ButtonText, Heading, Muted, Screen, Text } from "@reelparty/ui";
 import { useUserId } from "../../hooks/useUserId";
 import { useAppNavigation } from "../../navigation/useAppNavigation";
-import { useToast } from "../../provider";
+import { useApp, useToast } from "../../provider";
 import { BackBar } from "../../components/BackBar";
 import { Input } from "../../components/Input";
 import { KeyboardFloatingFooter } from "../../components/KeyboardFloatingFooter";
@@ -16,10 +16,22 @@ export function CreateScreen() {
   const me = useUserId();
   const nav = useAppNavigation();
   const toast = useToast();
+  const { session } = useApp();
   const utils = trpc.useUtils();
   const createMut = trpc.party.create.useMutation();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Prefill the name used last time (don't overwrite anything already typed).
+  useEffect(() => {
+    let active = true;
+    void session.loadDisplayName().then((saved) => {
+      if (active && saved) setName((prev) => prev || saved);
+    });
+    return () => {
+      active = false;
+    };
+  }, [session]);
 
   const create = async () => {
     if (!me || busy) return;
@@ -36,6 +48,7 @@ export function CreateScreen() {
         hostId: me,
         hostName: name.trim() || "Host",
       });
+      void session.saveDisplayName(name);
       nav.goParty(code);
     } catch {
       toast("Couldn't create the party");

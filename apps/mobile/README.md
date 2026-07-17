@@ -52,6 +52,25 @@ pnpm expo run:ios --device
 With a free Apple ID the install expires after 7 days — just re-run
 `pnpm expo run:ios --device` to refresh it.
 
+### Provisioning errors (App Groups / share extension)
+
+If the build fails with errors like "Provisioning Profile … does not support
+the App Groups capability" or "No profiles for
+'com.reelparty.app.share-extension' were found", the provisioning profiles
+need to be regenerated — `expo run:ios` calls `xcodebuild` without permission
+to update them. Run one build with that permission (from `apps/mobile`):
+
+```bash
+xcodebuild -workspace ios/ReelParty.xcworkspace -scheme ReelParty \
+  -configuration Debug -destination 'generic/platform=iOS' \
+  -allowProvisioningUpdates build
+```
+
+This registers the `group.com.reelparty.app` App Group and creates profiles
+for both the app and the share extension, then `pnpm expo run:ios --device`
+works again. Expect this after `expo prebuild --clean` or when free-account
+profiles expire.
+
 ### Day-to-day
 
 No cable or rebuild needed. From the monorepo root:

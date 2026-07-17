@@ -8,6 +8,7 @@ export {
 export { useAppNavigation } from "./navigation/useAppNavigation";
 export { useUserId } from "./hooks/useUserId";
 export { usePartyRoom, type PartyRoom } from "./hooks/usePartyRoom";
+export { useHandleSharedVideo } from "./hooks/useHandleSharedVideo";
 
 export { WelcomeScreen } from "./features/welcome/WelcomeScreen";
 export { CreateScreen } from "./features/create/CreateScreen";

@@ -11,6 +11,7 @@ export interface KeyValueStore {
 }
 
 const UID_KEY = "rp_uid";
+const NAME_KEY = "rp_name";
 const SESSION_KEY = "rp_session";
 const QUEUE_FILTERS_KEY = "rp_queue_filters";
 const LEGACY_HIDE_WATCHED_KEY = "rp_hide_watched";
@@ -35,6 +36,26 @@ export function createSessionStore(store: KeyValueStore) {
       await store.setItem(UID_KEY, id);
     }
     return id;
+  }
+
+  /** Last display name the user entered when joining/creating a party. */
+  async function loadDisplayName(): Promise<string | null> {
+    try {
+      const name = (await store.getItem(NAME_KEY))?.trim();
+      return name || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function saveDisplayName(name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await store.setItem(NAME_KEY, trimmed);
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
   }
 
   async function loadSession(): Promise<Session | null> {
@@ -108,6 +129,8 @@ export function createSessionStore(store: KeyValueStore) {
 
   return {
     getUserId,
+    loadDisplayName,
+    saveDisplayName,
     loadSession,
     saveSession,
     loadQueueFilters,
